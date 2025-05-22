@@ -16,6 +16,7 @@ namespace RetroCamera;
 internal class Core
 {
     public static World _client;
+
     static Entity _localCharacter = Entity.Null;
     static Entity _localUser = Entity.Null;
     public static Entity LocalCharacter =>
@@ -92,6 +93,8 @@ internal class Core
         Systems.RetroCamera.ResetState();
 
         _initialized = false;
+        _localCharacter = Entity.Null;
+        _localUser = Entity.Null;
     }
     public static void LogEntity(World world, Entity entity)
     {

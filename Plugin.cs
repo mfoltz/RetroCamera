@@ -24,9 +24,7 @@ internal class Plugin : BasePlugin
             return;
         }
 
-        // Settings.Initialize();
         AddComponent<Systems.RetroCamera>();
-
         _harmony = Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
 
         Core.Log.LogInfo($"{MyPluginInfo.PLUGIN_NAME}[{MyPluginInfo.PLUGIN_VERSION}] loaded on client!");

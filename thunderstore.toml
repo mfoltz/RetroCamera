@@ -1,5 +1,5 @@
 [package.dependencies]
-BepInEx-BepInExPack_V_Rising = "1.691.3"
+BepInEx-BepInExPack_V_Rising = "1.733.2"
 
 [publish]
 communities = ["v-rising"]

@@ -21,8 +21,6 @@ internal static class Settings
     public static float FieldOfView { get => _fieldOfViewOption.Value; set => _fieldOfViewOption.SetValue(value); }
     public static float CrosshairSize { get => _crosshairSize.Value; set => _crosshairSize.SetValue(value); }
     public static bool HideCharacterInfoPanel { get => _hideCharacterInfoPanel.Value; set => _hideCharacterInfoPanel.SetValue(value); }
-
-    // public static CameraAimMode CameraAimMode { get => _cameraAimModeOption.GetEnumValue<CameraAimMode>(); set => _cameraAimModeOption.SetValue((int)value); }
     public static int AimOffsetX { get => (int)(Screen.width * (_aimOffsetXOption.Value / 100)); set => _aimOffsetXOption.SetValue(Mathf.Clamp(value / Screen.width, -25, 25)); }
     public static int AimOffsetY { get => (int)(Screen.height * (_aimOffsetYOption.Value / 100)); set => _aimOffsetYOption.SetValue(Mathf.Clamp(value / Screen.width, -25, 25)); }
     public static bool LockZoom { get => _lockCameraZoomOption.Value; set => _lockCameraZoomOption.SetValue(value); }
@@ -67,9 +65,7 @@ internal static class Settings
     static Toggle _alwaysShowCrosshairOption;
     static Toggle _actionModeCrosshairOption;
     static Toggle _hideCharacterInfoPanel;
-    // static Toggle _defaultBuildModeOption;
 
-    // static Dropdown _cameraAimModeOption;
     static Slider _aimOffsetXOption;
     static Slider _aimOffsetYOption;
 
