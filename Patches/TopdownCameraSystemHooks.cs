@@ -1,6 +1,7 @@
 ﻿using BepInEx.Unity.IL2CPP.Hook;
 using ProjectM;
 using ProjectM.Presentation;
+using ProjectM.UI;
 using RetroCamera.Behaviours;
 using RetroCamera.Utilities;
 using System.Runtime.InteropServices;
@@ -9,7 +10,6 @@ using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Transforms;
 using UnityEngine;
-using static RetroCamera.Systems.RetroCamera;
 using static RetroCamera.Utilities.CameraState;
 
 namespace RetroCamera.Patches;
@@ -20,6 +20,7 @@ internal static class TopdownCameraSystemHooks
     unsafe delegate void HandleInputHandler(
         IntPtr _this, 
         ref InputState inputState);
+
     static HandleInputHandler? _handleInputOriginal;
     static INativeDetour? _handleInputDetour;
 
@@ -32,6 +33,7 @@ internal static class TopdownCameraSystemHooks
         ref Translation cameraTranslation,
         ref Rotation cameraRotation
     );
+
     static UpdateCameraHandler? _updateCameraOriginal;
     static INativeDetour? _updateCameraDetour;
 
@@ -48,6 +50,12 @@ internal static class TopdownCameraSystemHooks
 
     static CursorPositionExecuteHandler? _cursorPositionExecuteOriginal;
     static INativeDetour? _cursorPositionExecuteDetour;
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    unsafe delegate void HandleGamepadHandler(IntPtr _this, ref InputState inputState);
+
+    static HandleGamepadHandler? _handleGamepadOriginal;
+    static INativeDetour? _handleGamepadDetour;
 
     static ZoomSettings _defaultZoomSettings;
     static ZoomSettings _defaultStandardZoomSettings;
@@ -80,7 +88,7 @@ internal static class TopdownCameraSystemHooks
         {
             Core.Log.LogError($"Failed to create UpdateCamera detour: {e}");
         }
-
+        
         try
         {
             _cursorPositionExecuteDetour = NativeDetour.Create(
@@ -93,6 +101,20 @@ internal static class TopdownCameraSystemHooks
         catch (Exception e)
         {
             Core.Log.LogError($"Failed to create CursorPositionExecute detour: {e}");
+        }
+
+        try
+        {
+            _handleGamepadDetour = NativeDetour.Create(
+                typeof(GamepadCursorSystem),
+                "HandleInput",
+                HandleGamepadPatch,
+                out _handleGamepadOriginal
+            );
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"Failed to create HandleGamepadInput detour: {ex}");
         }
     }
     static unsafe void HandleInputPatch(IntPtr _this, ref InputState inputState)
@@ -162,7 +184,6 @@ internal static class TopdownCameraSystemHooks
             _usingDefaultZoomSettings = true;
         }
 
-        // Finally, call the original method
         _updateCameraOriginal!(
             _this,
             ref cameraTarget,
@@ -202,26 +223,12 @@ internal static class TopdownCameraSystemHooks
 
         if (_usingMouseWheel)
         {
-            // Core.Log.LogWarning($"[RetroCamera] UsingActionWheel");
             Cursor.lockState = CursorLockMode.None;
         }
-        else if (SocialWheelActive)
-        {
-
-        }
-        // Locks the mouse to the center of the screen if the mouse should be locked like for action mode or the camera rotate button is pressed
         else if (_validGameplayInputState &&
            (_isMouseLocked || _gameplayInputState.IsInputPressed(ButtonInputAction.RotateCamera)) &&
            !IsMenuOpen)
         {
-            /*
-            if (_usingMouseWheel || SocialWheelActive)
-            {
-                Core.Log.LogWarning($"[RetroCamera] UsingActionWheel");
-                Cursor.lockState = CursorLockMode.None;
-            }
-            */
-            // else if (_isActionMode || _isFirstPerson || Settings.CameraAimMode.Equals(CameraAimMode.Forward))
             if (_isActionMode || _isFirstPerson)
             {
                 float2 screenPosition = new((Screen.width / 2) + Settings.AimOffsetX, (Screen.height / 2) + Settings.AimOffsetY);
@@ -231,7 +238,18 @@ internal static class TopdownCameraSystemHooks
             }
         }
 
-        // Call the original method so the game logic proceeds
+        /*
+        if (Settings._cursorPosition != Vector3.zero)
+        {
+            cursorPosition.ScreenPosition = new float2(
+                Settings._cursorPosition.x,
+                Settings._cursorPosition.y
+            );
+
+            Settings._cursorPosition = Vector3.zero;
+        }
+        */
+
         _cursorPositionExecuteOriginal!(
             _this,
             ref collisionWorld,
@@ -242,10 +260,16 @@ internal static class TopdownCameraSystemHooks
             ref entityManager
         );
     }
+    static unsafe void HandleGamepadPatch(IntPtr _this, ref InputState inputState)
+    {
+        Core.Log.LogWarning("[GamepadCursorSystem.HandleInput]");
+        _handleGamepadOriginal!(_this, ref inputState);
+    }
     public static void Dispose()
     {
         _handleInputDetour?.Dispose();
         _updateCameraDetour?.Dispose();
         _cursorPositionExecuteDetour?.Dispose();
+        _handleGamepadDetour?.Dispose();
     }
 }

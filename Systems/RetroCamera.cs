@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using static RetroCamera.Configuration.QuipManager;
 using static RetroCamera.Utilities.CameraState;
+using static RetroCamera.Patches.MoodManagerComponentPatch;
 
 namespace RetroCamera.Systems;
 public class RetroCamera : MonoBehaviour
@@ -262,7 +263,6 @@ public class RetroCamera : MonoBehaviour
             rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             rectTransform.sizeDelta = new Vector2(32, 32);
-            // rectTransform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
             rectTransform.localScale = Vector3.one;
             rectTransform.localPosition = new Vector3(0, 0, 0);
 
@@ -299,6 +299,8 @@ public class RetroCamera : MonoBehaviour
 
             bool shouldHandle = _validGameplayInputState && 
                (_isMouseLocked || rotatingCamera);
+
+            _cachedVignette?.active = Settings.ShowVignette;
 
             if (shouldHandle && !IsMenuOpen)
             {

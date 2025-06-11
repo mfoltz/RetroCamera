@@ -50,21 +50,21 @@ internal static class OptionsManager
 
         if (!_options.TryGetValue(entry.Key, out var raw))
         {
-            Core.Log.LogWarning($"[OptionsManager] ❌ Key not found: {entry.Key}");
+            Core.Log.LogWarning($"[OptionsManager] Key not found: {entry.Key}");
             return false;
         }
 
         var expectedType = GetValueType(entry.Type);
         if (expectedType == null)
         {
-            Core.Log.LogWarning($"[OptionsManager] ⛔ Unsupported type for: {entry.Key} ({entry.Type})");
+            Core.Log.LogWarning($"[OptionsManager] Unsupported type for: {entry.Key} ({entry.Type})");
             return false;
         }
 
         var menuOptionType = typeof(MenuOption<>).MakeGenericType(expectedType);
         if (!menuOptionType.IsInstanceOfType(raw))
         {
-            Core.Log.LogWarning($"[OptionsManager] ❌ Type mismatch: {entry.Key} (expected: {menuOptionType.Name}, actual: {raw.GetType().Name})");
+            Core.Log.LogWarning($"[OptionsManager] Type mismatch: {entry.Key} (expected: {menuOptionType.Name}, actual: {raw.GetType().Name})");
             return false;
         }
 

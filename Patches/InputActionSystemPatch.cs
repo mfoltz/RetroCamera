@@ -30,7 +30,7 @@ internal static class InputActionSystemPatch
 
     [HarmonyPatch(typeof(InputActionSystem), nameof(InputActionSystem.OnUpdate))]
     [HarmonyPrefix]
-    static void OnUpdatePrefix()
+    static void OnUpdatePrefix(InputActionSystem __instance)
     {
         foreach (Keybinding keybind in KeybindsManager.Keybinds.Values)
         {

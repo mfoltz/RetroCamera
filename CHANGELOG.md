@@ -1,3 +1,7 @@
+`1.5.4`
+- added menu toggle to show/hide vignette
+- added menu toggle to show/skip intro
+
 `1.4.4`
 - mouse hides when moving camera when inventory menu, crafting menus, etc. are open
 - command wheel configuration persists when changing worlds, should generally feel a bit smoother to use with slight delay to prevent accidental command usage after wheel immediately opened and tuned forced delay between commands

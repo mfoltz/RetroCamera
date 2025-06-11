@@ -27,7 +27,7 @@ internal abstract class CameraBehaviour
     public virtual bool ShouldActivate(ref TopdownCameraState state) => false;
     public virtual unsafe void HandleInput(ref InputState inputState)
     {
-        if (!inputState.InputsPressed.IsCreated) return;
+        if (!_validGameplayInputState || !inputState.InputsPressed.IsCreated) return;
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
@@ -61,15 +61,6 @@ internal abstract class CameraBehaviour
 
         // Update zoom if MaxZoom is changed
         if (_targetZoom > Settings.MaxZoom) _targetZoom = Settings.MaxZoom;
-
-        /*
-        if (_shouldActivateWheel)
-        {
-            Core.Log.LogWarning($"[RetroCamera] Setting current wheel...");
-            // Core.ActionWheelSystem._CurrentActiveWheel = SocialWheel;
-            _shouldActivateWheel = false;
-        }
-        */
 
         if (SocialWheelActive)
         {

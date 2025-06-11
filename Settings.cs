@@ -9,6 +9,7 @@ using static RetroCamera.Utilities.Persistence;
 using static RetroCamera.Configuration.QuipManager;
 using BoolChanged = RetroCamera.Configuration.MenuOption<bool>.OptionChangedHandler<bool>;
 using FloatChanged = RetroCamera.Configuration.MenuOption<float>.OptionChangedHandler<float>;
+using UnityEngine.InputSystem;
 
 namespace RetroCamera;
 internal static class Settings
@@ -19,6 +20,8 @@ internal static class Settings
     public static bool AlwaysShowCrosshair { get => _alwaysShowCrosshairOption.Value; set => _alwaysShowCrosshairOption.SetValue(value); }
     public static bool ActionModeCrosshair { get => _actionModeCrosshairOption.Value; set => _actionModeCrosshairOption.SetValue(value); }
     public static float FieldOfView { get => _fieldOfViewOption.Value; set => _fieldOfViewOption.SetValue(value); }
+    public static bool ShowVignette { get => _showVignette.Value; set => _showVignette.SetValue(value); }
+    public static bool SkipIntro { get => _skipIntro.Value; set => _skipIntro.SetValue(value); }
     public static float CrosshairSize { get => _crosshairSize.Value; set => _crosshairSize.SetValue(value); }
     public static bool HideCharacterInfoPanel { get => _hideCharacterInfoPanel.Value; set => _hideCharacterInfoPanel.SetValue(value); }
     public static int AimOffsetX { get => (int)(Screen.width * (_aimOffsetXOption.Value / 100)); set => _aimOffsetXOption.SetValue(Mathf.Clamp(value / Screen.width, -25, 25)); }
@@ -42,25 +45,14 @@ internal static class Settings
 
     const float ZOOM_OFFSET = 2f;
 
-    /* unused, if overall merited will do actual buff checks
-    public static readonly Dictionary<string, Vector2> FirstPersonShapeshiftOffsets = new()
-    {
-        { "AB_Shapeshift_Bat_Buff", new Vector2(0, 2.5f) },
-        { "AB_Shapeshift_Bear_Buff", new Vector2(0.25f, 5f) },
-        { "AB_Shapeshift_Bear_Skin01_Buff", new Vector2(0.25f, 5f) },
-        { "AB_Shapeshift_Human_Grandma_Skin01_Buff", new Vector2(-0.1f, 1.55f) },
-        { "AB_Shapeshift_Human_Buff", new Vector2(0.5f, 1.4f) },
-        { "AB_Shapeshift_Rat_Buff", new Vector2(-1.85f, 2f) },
-        { "AB_Shapeshift_Toad_Buff", new Vector2(-0.6f, 4.2f) },
-        { "AB_Shapeshift_Wolf_Buff", new Vector2(-0.25f, 4.3f) },
-        { "AB_Shapeshift_Wolf_Skin01_Buff", new Vector2(-0.25f, 4.3f) }
-    };
-    */
+    public static Vector3 _cursorPosition = Vector3.zero;
 
     static Toggle _enabledOption;
     static Toggle _firstPersonEnabledOption;
     static Toggle _commandWheelEnabled;
     static Slider _fieldOfViewOption;
+    static Toggle _showVignette;
+    static Toggle _skipIntro;
     static Slider _crosshairSize;
     static Toggle _alwaysShowCrosshairOption;
     static Toggle _actionModeCrosshairOption;
@@ -135,6 +127,8 @@ internal static class Settings
         _actionModeCrosshairOption = AddToggle("Action Mode Crosshair", "Show crosshair during action mode", false);
         _hideCharacterInfoPanel = AddToggle("Hide Character Info Panel", "Removes character info panel from the top of the screen during action mode", false);
         _fieldOfViewOption = AddSlider("FOV", "Camera field of view", 50, 90, 60);
+        _showVignette = AddToggle("Show Vignette", "Shows or hides the vignette", true);
+        _skipIntro = AddToggle("Skip Intro", "Skip the intro when launching game", true);
         _crosshairSize = AddSlider("Crosshair Size", "Crosshair size scaling", 1f, 5f, 1f);
 
         AddDivider("Third Person Zoom");
@@ -239,6 +233,8 @@ internal static class Settings
                 {
                     Cursor.lockState = CursorLockMode.None;
                 }
+
+                // _cursorPosition = Input.mousePosition;
             }
             else if (!Enabled && !_isFirstPerson && !IsMenuOpen && !EscapeMenuViewPatch._isServerPaused)
             {
@@ -254,6 +250,8 @@ internal static class Settings
                 {
                     Cursor.lockState = CursorLockMode.None;
                 }
+
+                // _cursorPosition = Input.mousePosition;
             }
         });
 
