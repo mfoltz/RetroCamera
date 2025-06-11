@@ -300,7 +300,10 @@ public class RetroCamera : MonoBehaviour
             bool shouldHandle = _validGameplayInputState && 
                (_isMouseLocked || rotatingCamera);
 
-            _cachedVignette?.active = Settings.ShowVignette;
+            if (_cachedVignette != null)
+            {
+                _cachedVignette.active = Settings.ShowVignette;
+            }
 
             if (shouldHandle && !IsMenuOpen)
             {
