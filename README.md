@@ -1,6 +1,5 @@
 ## Table of Contents
 
-- [BepInExRC2](https://github.com/decaprime/VRising-Modding/releases/tag/1.733.2) <--- **REQUIRED**
 - [Sponsors](#sponsors)
 - [Features](#features)
 - [Configuration](#configuration)
