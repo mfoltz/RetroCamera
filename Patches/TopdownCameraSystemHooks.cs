@@ -10,6 +10,7 @@ using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Transforms;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using static RetroCamera.Utilities.CameraState;
 
 namespace RetroCamera.Patches;
@@ -51,12 +52,6 @@ internal static class TopdownCameraSystemHooks
     static CursorPositionExecuteHandler? _cursorPositionExecuteOriginal;
     static INativeDetour? _cursorPositionExecuteDetour;
 
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    unsafe delegate void HandleGamepadHandler(IntPtr _this, ref InputState inputState);
-
-    static HandleGamepadHandler? _handleGamepadOriginal;
-    static INativeDetour? _handleGamepadDetour;
-
     static ZoomSettings _defaultZoomSettings;
     static ZoomSettings _defaultStandardZoomSettings;
     static ZoomSettings _defaultBuildModeZoomSettings;
@@ -88,7 +83,7 @@ internal static class TopdownCameraSystemHooks
         {
             Core.Log.LogError($"Failed to create UpdateCamera detour: {e}");
         }
-        
+
         try
         {
             _cursorPositionExecuteDetour = NativeDetour.Create(
@@ -101,20 +96,6 @@ internal static class TopdownCameraSystemHooks
         catch (Exception e)
         {
             Core.Log.LogError($"Failed to create CursorPositionExecute detour: {e}");
-        }
-
-        try
-        {
-            _handleGamepadDetour = NativeDetour.Create(
-                typeof(GamepadCursorSystem),
-                "HandleInput",
-                HandleGamepadPatch,
-                out _handleGamepadOriginal
-            );
-        }
-        catch (Exception ex)
-        {
-            Core.Log.LogError($"Failed to create HandleGamepadInput detour: {ex}");
         }
     }
     static unsafe void HandleInputPatch(IntPtr _this, ref InputState inputState)
@@ -260,16 +241,20 @@ internal static class TopdownCameraSystemHooks
             ref entityManager
         );
     }
+
+    /*
     static unsafe void HandleGamepadPatch(IntPtr _this, ref InputState inputState)
     {
+        // Gamepad, GamepadCursorParent, GamepadCursorSystem
+
         Core.Log.LogWarning("[GamepadCursorSystem.HandleInput]");
         _handleGamepadOriginal!(_this, ref inputState);
     }
+    */
     public static void Dispose()
     {
         _handleInputDetour?.Dispose();
         _updateCameraDetour?.Dispose();
         _cursorPositionExecuteDetour?.Dispose();
-        _handleGamepadDetour?.Dispose();
     }
 }

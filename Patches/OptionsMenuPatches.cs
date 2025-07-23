@@ -82,7 +82,7 @@ internal static class OptionsMenuPatches
 
                         Toggle toggle = toggleOption as Toggle;
                         var toggleEntry = UIHelper.InstantiatePrefabUnderAnchor(__instance.CheckboxPrefab, __instance.ContentNode);
-                        
+
                         toggleEntry.Initialize(
                             toggle.NameKey,
                             new Il2CppSystem.Nullable_Unboxed<LocalizationKey>(toggle.DescKey),

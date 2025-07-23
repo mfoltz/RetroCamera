@@ -1,6 +1,7 @@
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using ProjectM;
+using ProjectM.Network;
 using ProjectM.Physics;
 using ProjectM.Scripting;
 using ProjectM.Sequencer;
@@ -44,6 +45,8 @@ internal class Core
     public static CursorPositionSystem CursorPositionSystem { get; set; }
     public static InputActionSystem InputActionSystem { get; set; }
     public static LocalUserSystem LocalUserSystem { get; set; }
+    public static NetworkIdSystem.Singleton NetworkIdSystem { get; set; }
+    public static ClientChatSystem ClientChatSystem { get; set; }
     public static ManualLogSource Log => Plugin.LogInstance;
 
     static MonoBehaviour _monoBehaviour;
@@ -56,7 +59,7 @@ internal class Core
         _client = __instance.World;
 
         ZoomModifierSystem = _client.GetExistingSystemManaged<ZoomModifierSystem>();
-        ZoomModifierSystem.Enabled = false; // necessary?
+        ZoomModifierSystem.Enabled = false;
 
         TopdownCameraSystem = _client.GetExistingSystemManaged<TopdownCameraSystem>();
         TargetInfoParentSystem = _client.GetExistingSystemManaged<TargetInfoParentSystem>();
@@ -71,6 +74,8 @@ internal class Core
 
         InputActionSystem = _client.GetExistingSystemManaged<InputActionSystem>();
         LocalUserSystem = _client.GetExistingSystemManaged<LocalUserSystem>();
+        NetworkIdSystem = ClientScriptMapper.GetSingleton<NetworkIdSystem.Singleton>();
+        ClientChatSystem = _client.GetExistingSystemManaged<ClientChatSystem>();
         TopdownCameraSystemHooks.Initialize();
 
         _initialized = true;

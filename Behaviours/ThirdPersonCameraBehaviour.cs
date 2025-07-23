@@ -56,7 +56,6 @@ internal class ThirdPersonCameraBehaviour : CameraBehaviour
             data.BuildModeZoomSettings.MaxPitch = Settings.LockPitchAngle;
             data.BuildModeZoomSettings.MinPitch = Settings.LockPitchAngle;
         }
-        // else if (state.InBuildMode && Settings.ActiveDuringBuildMode)
         else if (state.InBuildMode)
         {
             data.BuildModeZoomSettings.MinZoom = Settings.MinZoom;

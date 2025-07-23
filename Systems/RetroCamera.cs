@@ -9,6 +9,9 @@ using UnityEngine.UI;
 using static RetroCamera.Configuration.QuipManager;
 using static RetroCamera.Utilities.CameraState;
 using static RetroCamera.Patches.MoodManagerComponentPatch;
+using RetroCamera.Utilities;
+using RetroCamera.Patches;
+using UnityEngine.InputSystem;
 
 namespace RetroCamera.Systems;
 public class RetroCamera : MonoBehaviour
@@ -83,11 +86,11 @@ public class RetroCamera : MonoBehaviour
         Settings.AddHideFogListener(ToggleFog);
         Settings.AddSocialWheelPressedListener(SocialWheelKeyPressed);
         Settings.AddSocialWheelUpListener(SocialWheelKeyUp);
-        Settings.AddCompleteTutorialListener(CompleteTutorial);
+        Settings.AddCompleteTutorialListener(CompleteJournalTask);
     }
 
     static GameObject _journalClaimButtonObject;
-    static void CompleteTutorial()
+    static void CompleteJournalTask()
     {
         if (!Settings.Enabled) return;
         if (_journalClaimButtonObject == null) _journalClaimButtonObject = GameObject.Find("HUDCanvas(Clone)/JournalCanvas/JournalParent(Clone)/Content/Layout/JournalEntry_Multi/ButtonParent/ClaimButton");
@@ -237,6 +240,17 @@ public class RetroCamera : MonoBehaviour
         }
 
         UpdateCrosshair();
+
+        /*
+        if (InputActionSystemPatch.IsGamepad)
+        {
+            // InputSchemeGamepadData, RemapAbilitySlotsForGamepadSystem
+            float horizontal = Gamepad.current.rightStick.x.ReadValue();
+            float vertical = Gamepad.current.rightStick.y.ReadValue();
+
+            Core.Log.LogWarning($"[RetroCamera] RightStick - Horizontal: {horizontal}, Vertical: {vertical}");
+        }
+        */
     }
     void OnApplicationFocus(bool hasFocus)
     {

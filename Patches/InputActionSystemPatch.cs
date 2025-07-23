@@ -9,6 +9,9 @@ namespace RetroCamera.Patches;
 [HarmonyPatch]
 internal static class InputActionSystemPatch
 {
+    public static bool IsGamepad => _isGamepad;
+    static bool _isGamepad = false;
+
     [HarmonyPatch(typeof(TopdownCameraSystem), nameof(TopdownCameraSystem.OnUpdate))]
     [HarmonyPrefix]
     static void OnUpdatePrefix(TopdownCameraSystem __instance)
@@ -38,6 +41,8 @@ internal static class InputActionSystemPatch
             if (IsKeybindUp(keybind)) keybind.KeyUp();
             if (IsKeybindPressed(keybind)) keybind.KeyPressed();
         }
+
+        _isGamepad = __instance.UsingGamepad;
     }
     static bool IsKeybindDown(Keybinding keybind)
     {

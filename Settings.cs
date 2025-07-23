@@ -4,12 +4,11 @@ using UnityEngine;
 using static RetroCamera.Configuration.Keybinding;
 using static RetroCamera.Configuration.KeybindsManager;
 using static RetroCamera.Configuration.OptionsManager;
+using static RetroCamera.Configuration.QuipManager;
 using static RetroCamera.Utilities.CameraState;
 using static RetroCamera.Utilities.Persistence;
-using static RetroCamera.Configuration.QuipManager;
 using BoolChanged = RetroCamera.Configuration.MenuOption<bool>.OptionChangedHandler<bool>;
 using FloatChanged = RetroCamera.Configuration.MenuOption<float>.OptionChangedHandler<float>;
-using UnityEngine.InputSystem;
 
 namespace RetroCamera;
 internal static class Settings
@@ -75,11 +74,13 @@ internal static class Settings
     static Slider _overTheShoulderXOption;
     static Slider _overTheShoulderYOption;
 
-    static Keybinding _enabledKeybind;
-    static Keybinding _actionModeKeybind;
-    static Keybinding _toggleHUDKeybind;
-    static Keybinding _toggleFogKeybind;
-    static Keybinding _completeTutorialKeybind;
+    // static Slider _regionMood;
+
+    static Keybinding _enabled;
+    static Keybinding _actionMode;
+    static Keybinding _toggleHUD;
+    static Keybinding _toggleFog;
+    static Keybinding _completeJournalTask;
     static Keybinding _toggleSocialWheel;
     public static void Initialize()
     {
@@ -105,11 +106,11 @@ internal static class Settings
     public static void AddFieldOfViewListener(FloatChanged handler) =>
         _fieldOfViewOption.AddListener(handler);
     public static void AddHideHUDListener(KeyHandler action) => 
-        _toggleHUDKeybind.AddKeyDownListener(action);
+        _toggleHUD.AddKeyDownListener(action);
     public static void AddHideFogListener(KeyHandler action) =>
-        _toggleFogKeybind.AddKeyDownListener(action);
+        _toggleFog.AddKeyDownListener(action);
     public static void AddCompleteTutorialListener(KeyHandler action) =>
-        _completeTutorialKeybind.AddKeyDownListener(action);
+        _completeJournalTask.AddKeyDownListener(action);
     public static void AddSocialWheelPressedListener(KeyHandler action) =>
         _toggleSocialWheel.AddKeyPressedListener(action);
     public static void AddSocialWheelUpListener(KeyHandler action) =>
@@ -118,8 +119,6 @@ internal static class Settings
     public static bool _wasDisabled = false;
     static void RegisterOptions()
     {
-        // Core.Log.LogWarning("Registering options...");
-
         _enabledOption = AddToggle("Enabled", "Enable or disable RetroCamera", true);
         _firstPersonEnabledOption = AddToggle("First Person", "Enable zooming in far enough for first-person view", true);
         _commandWheelEnabled = AddToggle("Command Wheel", "Enable command wheel", false);
@@ -144,7 +143,6 @@ internal static class Settings
         _lockCameraPitchAngleOption = AddSlider("Locked Pitch Angle", "Fixed pitch angle when locked", 0f, 90f, 60f);
 
         AddDivider("Third Person Aiming");
-        // _cameraAimModeOption = AddDropdown("Aiming Mode", "Ability aiming style", (int)CameraAimMode.Default, Enum.GetNames(typeof(CameraAimMode)));
         _aimOffsetXOption = AddSlider("Aiming Horizontal Offset", "Aim horizontal offset", -25f, 25f, 0f);
         _aimOffsetYOption = AddSlider("Aiming Vertical Offset", "Aim vertical offset", -25f, 25f, 0f);
 
@@ -187,10 +185,8 @@ internal static class Settings
     }
     static void RegisterKeybinds()
     {
-        // Core.Log.LogWarning("Registering keybinds...");
-
-        _enabledKeybind = AddKeybind("Toggle RetroCamera", "Enable or disable RetroCamera functions", KeyCode.LeftBracket);
-        _enabledKeybind.AddKeyDownListener(() =>
+        _enabled = AddKeybind("Toggle RetroCamera", "Enable or disable RetroCamera functions", KeyCode.LeftBracket);
+        _enabled.AddKeyDownListener(() =>
         {
             if (!EscapeMenuViewPatch._isServerPaused) _enabledOption.SetValue(!Enabled);
 
@@ -204,8 +200,8 @@ internal static class Settings
             }
         });
 
-        _actionModeKeybind = AddKeybind("Toggle Action Mode", "Toggle action mode", KeyCode.RightBracket);
-        _actionModeKeybind.AddKeyDownListener(() =>
+        _actionMode = AddKeybind("Toggle Action Mode", "Toggle action mode", KeyCode.RightBracket);
+        _actionMode.AddKeyDownListener(() =>
         {
             if (_wasDisabled && Enabled && !_isFirstPerson)
             {
@@ -255,11 +251,11 @@ internal static class Settings
             }
         });
 
-        _toggleHUDKeybind = AddKeybind("Toggle HUD", "Toggle HUD visibility", KeyCode.Backslash);
+        _toggleHUD = AddKeybind("Toggle HUD", "Toggle HUD visibility", KeyCode.Backslash);
 
-        _toggleFogKeybind = AddKeybind("Toggle Fog/Clouds", "Toggle visibility of fog and clouds (cloud ground shadows also affected)", KeyCode.Equals);
+        _toggleFog = AddKeybind("Toggle Fog/Clouds", "Toggle visibility of fog and clouds (cloud ground shadows also affected)", KeyCode.Equals);
 
-        _completeTutorialKeybind = AddKeybind("Complete Tutorial", "Pushes button for completed tutorials if applicable", KeyCode.Minus);
+        _completeJournalTask = AddKeybind("Complete Tutorial", "Pushes button for completed tutorials if applicable", KeyCode.Minus);
 
         _toggleSocialWheel = AddKeybind("Use Social Wheel", "Toggle social wheel visibility", KeyCode.RightAlt);
     }
@@ -272,7 +268,6 @@ internal static class Settings
             Core.Log.LogWarning("No options saved!");
             return false;
         }
-            
 
         foreach (var (key, loadedOption) in loaded)
         {

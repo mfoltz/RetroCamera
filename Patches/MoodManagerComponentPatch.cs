@@ -21,11 +21,11 @@ internal static class MoodManagerComponentPatch
         foreach (VolumeComponent volumeComponent in volume.profile.components)
         {
             if (volumeComponent.name.StartsWith("Vignette"))
-            {
                 _cachedVignette = volumeComponent;
                 _moodManager = __instance;
                 break;
-            }
+
+            volumeComponent.
         }
     }
 }
