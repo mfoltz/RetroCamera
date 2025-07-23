@@ -24,8 +24,6 @@ internal static class MoodManagerComponentPatch
                 _cachedVignette = volumeComponent;
                 _moodManager = __instance;
                 break;
-
-            volumeComponent.
         }
     }
 }
