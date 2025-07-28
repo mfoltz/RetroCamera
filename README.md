@@ -33,3 +33,12 @@ Yes, this has action mode (right bracket default, can rebind). Streamlined Moder
 - [Bloodstone](https://github.com/decaprime/Bloodstone) by [@decaprime](https://github.com/decaprime) Keybind implementation mostly informed by Bloodstone (plan on updating that aspect of Bloodstone back to functioning #soonTM) although I think some Silkworm made it in? Was extremely hard to keep track of at the time which was a large motivation for refactoring.
 - [RemoveVignette](https://github.com/iZastic/vrising-removevignette) by [@iZastic](https://github.com/iZastic) Original implementation, slightly modified in RetroCamera to work via menu toggle.
 - [IntroSkip](https://github.com/iZastic/vrising-introskip) by [@iZastic](https://github.com/iZastic) Original implementation, slightly modified in RetroCamera to work via menu toggle.
+## Codex Workflow
+
+1. Run `.codex/install.sh` once to install dependencies
+2. Build and deploy locally with `./dev_init.sh`
+3. Update message hashes using:
+   `dotnet run --project RetroCamera.csproj -p:RunGenerateREADME=false -- generate-messages .`
+4. Use the keywords (**CreatePrd**, **CreateTasks**, **TaskMaster**, **ClosePrd**) to manage PRDs and tasks
+
+Current PRDs and task lists are stored in `.project-management/current-prd/`, while completed items are moved to `.project-management/closed-prd/`.
