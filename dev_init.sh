@@ -9,7 +9,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT="$SCRIPT_DIR/RetroCamera.csproj"
-dotnet build --no-restore -c Release "$PROJECT"
+dotnet build --no-restore "$PROJECT"
 
 DLL_PATH="$SCRIPT_DIR/bin/Release/net6.0/RetroCamera.dll"
 
