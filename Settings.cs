@@ -101,7 +101,7 @@ internal static class Settings
         }
     }
     public static void AddEnabledListener(BoolChanged handler) =>
-    _enabledOption.AddListener(handler);
+        _enabledOption.AddListener(handler);
     public static void AddFieldOfViewListener(FloatChanged handler) =>
         _fieldOfViewOption.AddListener(handler);
     public static void AddHideHUDListener(KeyHandler action) => 

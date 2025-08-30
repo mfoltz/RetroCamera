@@ -49,7 +49,6 @@ internal abstract class CameraBehaviour
         // if (zoomValue != 0 && (!_inBuildMode || !Settings.ActiveDuringBuildMode))
         if (zoomValue != 0 && !_inBuildMode)
         {
-            // Consume zoom input for the camera
             var zoomAmount = Mathf.Lerp(.25f, 1.5f, Mathf.Max(0, _targetZoom - Settings.MinZoom) / Settings.MaxZoom);
             var zoomChange = inputState.GetAnalogValue(AnalogInputAction.ZoomCamera) > 0 ? zoomAmount : -zoomAmount;
 

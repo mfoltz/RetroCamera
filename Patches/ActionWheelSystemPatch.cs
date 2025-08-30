@@ -1,17 +1,16 @@
 ﻿using HarmonyLib;
 using ProjectM.UI;
-using RetroCamera.Configuration;
 using RetroCamera.Utilities;
 using static RetroCamera.Configuration.QuipManager;
-using static RetroCamera.Utilities.Quips;
 using static RetroCamera.Systems.RetroCamera;
+using static RetroCamera.Utilities.Quips;
 
 namespace RetroCamera.Patches;
 
 [HarmonyPatch]
 internal static class ActionWheelSystemPatch
 {
-    public static bool _wheelVisible = false;
+    public static bool _wheelVisible;
 
     [HarmonyPatch(typeof(ActionWheelSystem), nameof(ActionWheelSystem.OnUpdate))]
     [HarmonyPostfix]
@@ -19,7 +18,7 @@ internal static class ActionWheelSystemPatch
     {
         if (_wheelVisible)
         {
-            if (__instance._CurrentActiveWheel != null && !__instance._CurrentActiveWheel.IsVisible())
+            if (__instance._CurrentActiveWheel?.IsVisible() == false)
             {
                 CameraState.IsMenuOpen = false;
                 _wheelVisible = false;
@@ -30,13 +29,11 @@ internal static class ActionWheelSystemPatch
                 _wheelVisible = false;
             }
         }
-        else if (__instance._CurrentActiveWheel != null && __instance._CurrentActiveWheel.IsVisible())
+        else if (__instance._CurrentActiveWheel?.IsVisible() == true)
         {
             _wheelVisible = true;
             CameraState.IsMenuOpen = true;
         }
-
-        // Core.Log.LogWarning($"IsWheelActive {ActionWheelSystem.IsWheelActive}");
     }
 
     static DateTime _wheelOpened = DateTime.MinValue;
@@ -84,14 +81,14 @@ internal static class ActionWheelSystemPatch
             _wheelOpened = DateTime.MinValue;
         }
 
-        // Core.Log.LogWarning($"[ActionWheelSystem.HideCurrentWheel]");
         return true;
     }
 
+    /*
     [HarmonyPatch(typeof(ActionWheelSystem), nameof(ActionWheelSystem.UpdateAndShowWheel))]
     [HarmonyPrefix]
     static void UpdateAndShowWheelPrefix(ActionWheelSystem __instance)
     {
-        // Core.Log.LogWarning($"[ActionWheelSystem.UpdateAndShowWheel]");
     }
+    */
 }
