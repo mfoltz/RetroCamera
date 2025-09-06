@@ -6,6 +6,7 @@ using RetroCamera.Configuration;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Linq;
 using static RetroCamera.Configuration.QuipManager;
 using static RetroCamera.Utilities.CameraState;
 using static RetroCamera.Patches.MoodManagerComponentPatch;
@@ -153,22 +154,32 @@ public class RetroCamera : MonoBehaviour
 
                 try
                 {
-                    var chatQuips = generalGameplayCollection.ChatQuips;
                     var socialWheelData = ActionWheelSystem._SocialWheelDataList;
                     var socialWheelShortcuts = ActionWheelSystem._SocialWheelShortcutList;
 
-                    // Core.Log.LogWarning($"[RetroCamera] SocialWheelData count - {socialWheelData.Count} | {chatQuips.Length}");
-
-                    foreach (var commandQuip in CommandQuips)
+                    for (int i = 0; i < socialWheelData.Count; i++)
                     {
-                        if (string.IsNullOrEmpty(commandQuip.Value.Name)
-                            || string.IsNullOrEmpty(commandQuip.Value.Command))
-                            continue;
+                        ActionWheelData wheelData = socialWheelData[i];
+                        if (CommandQuips.TryGetValue(i, out var commandQuip))
+                        {
+                            if (!string.IsNullOrEmpty(commandQuip.Name) && !string.IsNullOrEmpty(commandQuip.Command))
+                            {
+                                wheelData.Name = commandQuip.NameKey;
+                                string categoryName = CommandCategories
+                                    .FirstOrDefault(pair => pair.Value.Any(cmd => cmd.Name == commandQuip.Name && cmd.InputString == commandQuip.Command))
+                                    .Key ?? string.Empty;
+                                wheelData.CategoryName = categoryName;
+                            }
+                            socialWheelShortcuts[i]?.gameObject?.SetActive(true);
+                        }
+                        else
+                        {
+                            wheelData.Name = string.Empty;
+                            wheelData.CategoryName = string.Empty;
+                            socialWheelShortcuts[i]?.gameObject?.SetActive(false);
+                        }
 
-                        ActionWheelData wheelData = socialWheelData[commandQuip.Key];
-
-                        // Core.Log.LogWarning($"[RetroCamera] WheelData - {commandQuip.Value.Name} | {commandQuip.Value.Command} | {wheelData.Name}");
-                        wheelData.Name = commandQuip.Value.NameKey;
+                        socialWheelData[i] = wheelData;
                     }
                 }
                 catch (Exception ex)
@@ -180,9 +191,10 @@ public class RetroCamera : MonoBehaviour
             _socialWheel = ActionWheelSystem?._SocialWheel;
             var shortcuts = _socialWheel.ActionWheelShortcuts;
 
-            foreach (var shortcut in shortcuts)
+            for (int i = 0; i < shortcuts.Length; i++)
             {
-                shortcut?.gameObject?.SetActive(false);
+                bool hasCommand = CommandQuips.ContainsKey(i);
+                shortcuts[i]?.gameObject?.SetActive(hasCommand);
             }
 
             _socialWheel.gameObject.SetActive(true);
