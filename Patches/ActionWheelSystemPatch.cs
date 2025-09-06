@@ -173,20 +173,16 @@ internal static class ActionWheelSystemPatch
     [HarmonyPrefix]
     static bool HideCurrentWheelPrefix(ActionWheelSystem __instance)
     {
-        if (SocialWheelActive)
-        {
-            _inCategoryMode = true;
-            _activeCategory = string.Empty;
-            PopulateCategories();
-            return false;
-        }
-        else if (!_wheelOpened.Equals(DateTime.MinValue))
+        _inCategoryMode = true;
+        _activeCategory = string.Empty;
+        PopulateCategories();
+
+        if (!_wheelOpened.Equals(DateTime.MinValue))
         {
             _wheelOpened = DateTime.MinValue;
         }
 
-        // Core.Log.LogWarning($"[ActionWheelSystem.HideCurrentWheel]");
-        return true;
+        return !SocialWheelActive;
     }
 
     [HarmonyPatch(typeof(ActionWheelSystem), nameof(ActionWheelSystem.UpdateAndShowWheel))]
