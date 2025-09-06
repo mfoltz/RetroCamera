@@ -1,10 +1,16 @@
 ﻿using RetroCamera.Utilities;
 using Stunlock.Localization;
+using System.Linq;
 
 namespace RetroCamera.Configuration;
 internal static class QuipManager
 {
     public static IReadOnlyDictionary<int, CommandQuip> CommandQuips => _commandQuips;
+    public static IReadOnlyDictionary<string, List<Command>> CommandCategories =>
+        _quipsByCategory.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value.Select(q => new Command { Name = q.Name, InputString = q.Command }).ToList());
+
     static readonly Dictionary<int, CommandQuip> _commandQuips = [];
     static readonly Dictionary<string, List<CommandQuip>> _quipsByCategory = [];
     const string DEFAULT_CATEGORY = "Default";
@@ -24,20 +30,34 @@ internal static class QuipManager
         _quipsByCategory.TryGetValue(category, out var quips) ? quips : Array.Empty<CommandQuip>();
     public static void TryLoadCommands()
     {
-        var loaded = Persistence.LoadCommands();
+        var categoryData = Persistence.LoadCommandCategories();
+        if (categoryData != null)
+        {
+            foreach (var pair in categoryData)
+            {
+                _quipsByCategory[pair.Key] = pair.Value
+                    .Select(cmd => new CommandQuip(cmd.Name, cmd.InputString))
+                    .ToList();
+            }
+        }
 
+        var loaded = Persistence.LoadCommands();
         if (loaded != null)
         {
-            List<CommandQuip> defaultCategory = [];
             foreach (var keyValuePair in loaded)
             {
                 Command command = keyValuePair.Value;
                 var commandQuip = new CommandQuip(command.Name, command.InputString);
-                _commandQuips.TryAdd(keyValuePair.Key, commandQuip);
-                defaultCategory.Add(commandQuip);
-            }
+                _commandQuips[keyValuePair.Key] = commandQuip;
 
-            if (defaultCategory.Count > 0) _quipsByCategory[DEFAULT_CATEGORY] = defaultCategory;
+                if (!_quipsByCategory.TryGetValue(DEFAULT_CATEGORY, out var list))
+                {
+                    list = [];
+                    _quipsByCategory[DEFAULT_CATEGORY] = list;
+                }
+
+                list.Add(commandQuip);
+            }
         }
     }
 }
