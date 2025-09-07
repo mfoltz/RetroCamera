@@ -91,11 +91,36 @@ internal static class TopdownCameraSystemHooks
         
         try
         {
-            _cursorPositionExecuteDetour = NativeDetour.Create(
-            typeof(CursorPositionSystem),                                   // The containing type
-            "CursorPositionSystem_59A0B5A3_LambdaJob_0_Execute",            // The method name
-            CursorPositionExecutePatch,         // Our patch method
-            out _cursorPositionExecuteOriginal
+            Type containerType = typeof(CursorPositionSystem);
+            bool hasLambdaJob0 = containerType.GetNestedTypes().Any(t => t.Name.Contains("LambdaJob_0"));
+
+            _cursorPositionExecuteDetour = NativeDetour.CreateBySignature<CursorPositionExecuteHandler>(
+                containerType,
+                t => hasLambdaJob0 ? t.Name.Contains("LambdaJob_0") : t.Name.Contains("LambdaJob"),
+                m =>
+                {
+                    if (m.IsStatic)
+                    {
+                        return false;
+                    }
+
+                    if (!(m.Name == "Execute" || m.Name.EndsWith("_Execute")))
+                    {
+                        return false;
+                    }
+
+                    var targetParams = typeof(CursorPositionExecuteHandler)
+                        .GetMethod("Invoke")!
+                        .GetParameters()
+                        .Skip(1)
+                        .Select(p => p.ParameterType);
+
+                    return m.GetParameters()
+                        .Select(p => p.ParameterType)
+                        .SequenceEqual(targetParams);
+                },
+                CursorPositionExecutePatch,
+                out _cursorPositionExecuteOriginal
             );
         }
         catch (Exception e)
