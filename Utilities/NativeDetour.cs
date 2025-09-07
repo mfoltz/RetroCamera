@@ -1,13 +1,14 @@
 ﻿using BepInEx.Unity.IL2CPP.Hook;
 using HarmonyLib;
 using System.Reflection;
+using System.Linq;
 
 namespace RetroCamera.Utilities;
 internal static class NativeDetour
 {
     public static INativeDetour Create<T>(Type type, string innerTypeName, string methodName, T to, out T original) where T : Delegate
     {
-        return Create(GetInnerType(type, innerTypeName), methodName, to, out original);
+        return Create(GetInnerType(type, innerTypeName, methodName), methodName, to, out original);
     }
     public static INativeDetour Create<T>(Type type, string methodName, T to, out T original) where T : Delegate
     {
@@ -39,8 +40,21 @@ internal static class NativeDetour
         return INativeDetour.CreateAndApply(address, to, out original);
     }
 
-    static Type GetInnerType(Type type, string innerTypeName)
+    static Type GetInnerType(Type type, string innerTypeName, string methodName)
     {
-        return type.GetNestedTypes().First(x => x.Name.Contains(innerTypeName));
+        var candidates = type
+            .GetNestedTypes()
+            .Where(x => x.Name.Contains(innerTypeName))
+            .Where(x => x.GetMethod(methodName, AccessTools.all) != null)
+            .ToArray();
+
+        if (candidates.Length == 0)
+        {
+            throw new ArgumentException(
+                $"Nested type containing method '{methodName}' not found for substring '{innerTypeName}'",
+                nameof(innerTypeName));
+        }
+
+        return candidates[0];
     }
 }
