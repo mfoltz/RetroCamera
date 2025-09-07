@@ -13,11 +13,32 @@ internal static class NativeDetour
     {
         return Create(type.GetMethod(methodName, AccessTools.all), to, out original);
     }
+
+    public static INativeDetour CreateBySignature<T>(
+        Type type,
+        Func<Type, bool> nestedTypePredicate,
+        Func<MethodInfo, bool> methodPredicate,
+        T to,
+        out T original) where T : Delegate
+    {
+        var nestedType = type.GetNestedTypes()
+            .FirstOrDefault(nestedTypePredicate)
+            ?? throw new ArgumentException("Nested type not found", nameof(nestedTypePredicate));
+
+        var method = nestedType
+            .GetMethods(AccessTools.all)
+            .FirstOrDefault(methodPredicate)
+            ?? throw new ArgumentException("Method not found", nameof(methodPredicate));
+
+        return Create(method, to, out original);
+    }
+
     static INativeDetour Create<T>(MethodInfo method, T to, out T original) where T : Delegate
     {
         var address = MethodResolver.ResolveFromMethodInfo(method);
         return INativeDetour.CreateAndApply(address, to, out original);
     }
+
     static Type GetInnerType(Type type, string innerTypeName)
     {
         return type.GetNestedTypes().First(x => x.Name.Contains(innerTypeName));
