@@ -3,6 +3,9 @@
 - [Sponsors](#sponsors)
 - [Features](#features)
 - [Configuration](#configuration)
+- [Development](#development)
+  - [Local build setup](#local-build-setup)
+  - [Manual build](#manual-build)
 - [Credits](#credits)
 
 ## Sponsor this project
@@ -22,6 +25,21 @@ Yes, this has action mode (right bracket default, can rebind). Streamlined Moder
 - **Additional Features:** Toggle HUD visibility; toggle batform fog visibility (this also hides clouds and their shadows on the ground); Complete journal quests via keybind; configurable action wheel for using commands;
 - **Command Wheel**: Add your label and raw command strings to the config file, enable the wheel in the menu options for RetroCamera, and use right alt key (default, can rebind) to use them on the fly!
 - **Configuration:** Configuration for keybinds and options done at the in-game menu with rebinding support. Current keybinds: toggle mod functioning, toggle action mode, toggle HUD, and toggle batform fog; complete journal quest;
+
+## Development
+
+### Local build setup
+
+1. Clone this repository.
+2. Run `./scripts/init.sh` to install the .NET SDK (if missing), restore NuGet dependencies (including `VRising.Unhollowed.Client`), and invoke a Release build with the appropriate `dotnet build` command. The script maintains a repo-local `.dotnet` folder so contributors without a global installation can still compile the mod.
+
+The V Rising client assemblies are delivered through the `VRising.Unhollowed.Client` NuGet package, so no manual extraction into a `third_party/` directory is required.
+
+### Manual build
+
+- Restore NuGet packages with `dotnet restore RetroCamera.csproj --source https://api.nuget.org/v3/index.json --source https://nuget.bepinex.dev/v3/index.json`.
+- After restoring packages, build with `dotnet build RetroCamera.csproj --configuration Release --no-restore`.
+- Visual Studio users can open `RetroCamera.csproj`, select the **Release** configuration, and build the project directly.
 
 ## Credits
 

@@ -20,13 +20,7 @@
   <ItemGroup>
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
     <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.733" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="VRising.GameData" Condition="Exists('third_party/VRising.GameData.dll')">
-      <HintPath>third_party/VRising.GameData.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <PackageReference Include="VRising.Unhollowed.Client" Version="1.1.9.9219901" />
   </ItemGroup>
 
   <ItemGroup>

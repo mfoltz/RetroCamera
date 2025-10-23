@@ -41,7 +41,7 @@ public class RetroCamera : MonoBehaviour
     {
         if (ZoomModifierSystem != null) ZoomModifierSystem.Enabled = !enabled;
 
-        if (_crosshair != null) _crosshair.active = enabled && Settings.AlwaysShowCrosshair && !_inBuildMode;
+        if (_crosshair != null) _crosshair.SetActive(enabled && Settings.AlwaysShowCrosshair && !_inBuildMode);
 
         if (!enabled)
         {
@@ -256,10 +256,8 @@ public class RetroCamera : MonoBehaviour
             CursorData cursorData = CursorController._CursorDatas.First(x => x.CursorType == CursorType.Game_Normal);
             if (cursorData == null) return;
 
-            _crosshairPrefab = new("Crosshair")
-            {
-                active = false
-            };
+            _crosshairPrefab = new("Crosshair");
+            _crosshairPrefab.SetActive(false);
 
             _crosshairPrefab.AddComponent<CanvasRenderer>();
             RectTransform rectTransform = _crosshairPrefab.AddComponent<RectTransform>();
@@ -275,7 +273,7 @@ public class RetroCamera : MonoBehaviour
             Image image = _crosshairPrefab.AddComponent<Image>();
             image.sprite = Sprite.Create(cursorData.Texture, new Rect(0, 0, cursorData.Texture.width, cursorData.Texture.height), new Vector2(0.5f, 0.5f), 100f);
 
-            _crosshairPrefab.active = false;
+            _crosshairPrefab.SetActive(false);
         }
         catch (Exception ex)
         {
@@ -297,7 +295,7 @@ public class RetroCamera : MonoBehaviour
 
                 _canvasScaler = uiCanvas.GetComponent<CanvasScaler>();
                 _crosshair = Instantiate(_crosshairPrefab, uiCanvas.transform);
-                _crosshair.active = true;
+                _crosshair.SetActive(true);
             }
 
             bool rotatingCamera = false;
@@ -306,7 +304,7 @@ public class RetroCamera : MonoBehaviour
             bool shouldHandle = _validGameplayInputState &&
                (_isMouseLocked || rotatingCamera);
 
-            _cachedVignette?.active = Settings.ShowVignette;
+            if (_cachedVignette != null) _cachedVignette.active = Settings.ShowVignette;
 
             if (shouldHandle && !IsMenuOpen)
             {
@@ -330,7 +328,7 @@ public class RetroCamera : MonoBehaviour
 
             if (_crosshair != null)
             {
-                _crosshair.active = crosshairVisible || Settings.AlwaysShowCrosshair;
+                _crosshair.SetActive(crosshairVisible || Settings.AlwaysShowCrosshair);
 
                 float scale = Settings.CrosshairSize;
                 _crosshair.transform.localScale = new(scale, scale, scale);

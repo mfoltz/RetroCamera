@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0        
         
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore RetroCamera.csproj --source https://api.nuget.org/v3/index.json --source https://nuget.bepinex.dev/v3/index.json
         
       - name: Discover .csproj
         id: discover_csproj
@@ -68,7 +68,7 @@ jobs:
           fi
           
       - name: Build (Release)
-        run: dotnet build . --configuration Release -p:Version=${{ env.version }} -p:RunGenerateREADME=false
+        run: dotnet build RetroCamera.csproj --configuration Release --no-restore -p:Version=${{ env.version }} -p:RunGenerateREADME=false
 
       - name: GH Release
         uses: softprops/action-gh-release@v1
