@@ -38,7 +38,7 @@ internal static class Persistence
     public static void SaveCommands() => SaveDictionary(CommandQuips, COMMANDS_KEY);
     public static Dictionary<string, Keybinding> LoadKeybinds() => LoadDictionary<string, Keybinding>(KEYBINDS_KEY);
     public static Dictionary<string, MenuOption> LoadOptions() => LoadDictionary<string, MenuOption>(OPTIONS_KEY);
-    public static Dictionary<int, Command> LoadCommands() => LoadDictionary<int, Command>(COMMANDS_KEY);
+    public static Dictionary<byte, Command> LoadCommands() => LoadDictionary<byte, Command>(COMMANDS_KEY);
     static Dictionary<T, U> LoadDictionary<T, U>(string fileKey)
     {
         if (!_filePaths.TryGetValue(fileKey, out string filePath)) return null;
@@ -52,12 +52,12 @@ internal static class Persistence
             {
                 File.Create(filePath).Dispose();
 
-                if (fileKey == COMMANDS_KEY && typeof(T) == typeof(int) && typeof(U) == typeof(Command))
+                if (fileKey == COMMANDS_KEY && typeof(T) == typeof(byte) && typeof(U) == typeof(Command))
                 {
-                    var defaultDict = new Dictionary<int, Command>();
+                    var defaultDict = new Dictionary<byte, Command>();
                     for (int i = 0; i < 8; i++)
                     {
-                        defaultDict[i] = new Command { Name = "", InputString = "" };
+                        defaultDict[(byte)i] = new Command { Name = "", InputString = "" };
                     }
 
                     File.WriteAllText(filePath, JsonSerializer.Serialize(defaultDict, _jsonOptions));

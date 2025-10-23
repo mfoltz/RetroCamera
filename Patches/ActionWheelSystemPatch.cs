@@ -59,7 +59,7 @@ internal static class ActionWheelSystemPatch
 
         _lastQuipSendTime = now;
 
-        if (CommandQuips.TryGetValue(index, out CommandQuip commandQuip))
+        if (TryGetQuip(index, out CommandQuip commandQuip))
         {
             SendCommandQuip(commandQuip);
             return false;
