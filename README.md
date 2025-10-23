@@ -3,6 +3,9 @@
 - [Sponsors](#sponsors)
 - [Features](#features)
 - [Configuration](#configuration)
+- [Development](#development)
+  - [Local build setup](#local-build-setup)
+  - [Manual build](#manual-build)
 - [Credits](#credits)
 
 ## Sponsor this project
@@ -22,6 +25,19 @@ Yes, this has action mode (right bracket default, can rebind). Streamlined Moder
 - **Additional Features:** Toggle HUD visibility; toggle batform fog visibility (this also hides clouds and their shadows on the ground); Complete journal quests via keybind; configurable action wheel for using commands;
 - **Command Wheel**: Add your label and raw command strings to the config file, enable the wheel in the menu options for RetroCamera, and use right alt key (default, can rebind) to use them on the fly!
 - **Configuration:** Configuration for keybinds and options done at the in-game menu with rebinding support. Current keybinds: toggle mod functioning, toggle action mode, toggle HUD, and toggle batform fog; complete journal quest;
+
+## Development
+
+### Local build setup
+
+1. Clone this repository and install the proprietary V Rising managed assemblies that the project references. Copy `ProjectM.dll` (and any other required DLLs) into `third_party/` or set the `VRISING_REFERENCE_ARCHIVE` environment variable to a zip that contains them before running the setup script.
+2. Run `./scripts/init.sh` to install the .NET SDK (if missing), restore NuGet dependencies, download `VRising.GameData.dll`, and invoke a Release build with the appropriate `dotnet build` command. The script maintains a repo-local `.dotnet` folder so contributors without a global installation can still compile the mod.
+3. Rerun `./scripts/init.sh` after supplying the proprietary assemblies. The script will warn and skip the final build until `ProjectM.dll` is present. Once the dependencies are available the build will complete successfully.
+
+### Manual build
+
+- To build manually after dependencies are prepared, run `dotnet build RetroCamera.csproj --configuration Release`.
+- Visual Studio users can open `RetroCamera.csproj`, select the **Release** configuration, and build the project directly.
 
 ## Credits
 
