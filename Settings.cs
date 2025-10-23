@@ -125,38 +125,60 @@ internal static class Settings
     {
         if (HoldActionModeKey)
         {
-            EnterActionMode();
+            TryEnterActionMode();
             return;
         }
 
         if (_isActionMode)
         {
-            ExitActionMode();
+            TryExitActionMode();
         }
         else
         {
-            EnterActionMode();
+            TryEnterActionMode();
         }
     }
     static void HandleActionModeKeyUp()
     {
         if (!HoldActionModeKey) return;
 
-        ExitActionMode();
+        TryExitActionMode();
     }
-    static void EnterActionMode()
+    static void TryEnterActionMode()
     {
         if (_isFirstPerson) return;
+        if (EscapeMenuViewPatch._isServerPaused) return;
+
+        bool enabledTemporarily = false;
 
         if (!Enabled)
         {
-            if (IsMenuOpen || EscapeMenuViewPatch._isServerPaused) return;
+            if (IsMenuOpen) return;
 
-            _wasDisabled = true;
+            enabledTemporarily = true;
             _enabledOption.SetValue(true);
         }
 
-        RetroCamera.ActionMode(true);
+        _wasDisabled = enabledTemporarily;
+
+        UpdateActionModeState(true);
+    }
+    static void TryExitActionMode()
+    {
+        if (_isFirstPerson) return;
+        if (!_isActionMode && !_wasDisabled) return;
+
+        UpdateActionModeState(false);
+
+        if (_wasDisabled)
+        {
+            _wasDisabled = false;
+            _enabledOption.SetValue(false);
+        }
+    }
+    static void UpdateActionModeState(bool enabled)
+    {
+        RetroCamera.ActionMode(enabled);
 
         if (IsMenuOpen) IsMenuOpen = false;
         if (ActionWheelSystemPatch._wheelVisible) ActionWheelSystemPatch._wheelVisible = false;
@@ -165,26 +187,9 @@ internal static class Settings
         {
             Cursor.lockState = CursorLockMode.Locked;
         }
-    }
-    static void ExitActionMode()
-    {
-        if (_isFirstPerson) return;
-        if (!_isActionMode && !_wasDisabled) return;
-
-        RetroCamera.ActionMode(false);
-
-        if (IsMenuOpen) IsMenuOpen = false;
-        if (ActionWheelSystemPatch._wheelVisible) ActionWheelSystemPatch._wheelVisible = false;
-
-        if (Cursor.lockState.Equals(CursorLockMode.Locked) && (!_isActionMode || !_isMouseLocked))
+        else if (!enabled && Cursor.lockState.Equals(CursorLockMode.Locked) && (!_isActionMode || !_isMouseLocked))
         {
             Cursor.lockState = CursorLockMode.None;
-        }
-
-        if (_wasDisabled)
-        {
-            _wasDisabled = false;
-            _enabledOption.SetValue(false);
         }
     }
     static void RegisterOptions()
