@@ -1,44 +1,46 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-	<AssemblyName>RetroCamera</AssemblyName>
-	<Version>1.5.4</Version>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-	  <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
-	  <BepInExPluginGuid>io.zfolmt.RetroCamera</BepInExPluginGuid>
-	  <LangVersion>preview</LangVersion>
-	  <EnablePreviewFeatures>true</EnablePreviewFeatures>
+    <AssemblyName>RetroCamera</AssemblyName>
+    <Version>1.5.4</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <BepInExPluginGuid>io.zfolmt.RetroCamera</BepInExPluginGuid>
+    <LangVersion>preview</LangVersion>
+    <EnablePreviewFeatures>true</EnablePreviewFeatures>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
+    <RunGenerateREADME Condition="'$(RunGenerateREADME)' == ''">true</RunGenerateREADME>
+    <RunGenerateREADME Condition="'$(RunGenerateREADME)' == 'true' and Exists('$(MSBuildThisFileDirectory).git')">false</RunGenerateREADME>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove=".editorconfig" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
+    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.733" />
   </ItemGroup>
 
   <ItemGroup>
-    <EditorConfigFiles Include=".editorconfig" />
+    <Reference Include="VRising.GameData" Condition="Exists('third_party/VRising.GameData.dll')">
+      <HintPath>third_party/VRising.GameData.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
-	 
-	<ItemGroup>
-		<PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
-		<PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.733" />
-		<PackageReference Include="VRising.ReferenceAssemblies" Version="1.1.10.1-r94466-b2" />
-	</ItemGroup>
 
-	<ItemGroup>
-		<EmbeddedResource Include="Resources\ModDiscordLogo.png" />
-		<EmbeddedResource Include="Resources\RetroCameraLogo.png" />
-	</ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\ModDiscordLogo.png" />
+    <EmbeddedResource Include="Resources\RetroCameraLogo.png" />
+  </ItemGroup>
 
-	<ItemGroup>
-	  <None Include=".github\FUNDING.yml" />
-	  <None Include=".github\workflows\build.yml" />
-	  <None Include=".github\workflows\release.yml" />
-	</ItemGroup>
-	
-	<Target Name="BuildToClient" AfterTargets="Build">
-		<Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="C:\Program Files (x86)\Steam\steamapps\common\VRising\BepInEx\plugins" />
-	</Target>
+  <ItemGroup>
+    <None Include=".github\FUNDING.yml" />
+    <None Include=".github\workflows\build.yml" />
+    <None Include=".github\workflows\release.yml" />
+  </ItemGroup>
 
+  <Target Name="BuildToClient" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="C:\Program Files (x86)\Steam\steamapps\common\VRising\BepInEx\plugins" />
+  </Target>
 </Project>

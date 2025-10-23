@@ -1,5 +1,6 @@
 ﻿using RetroCamera.Configuration;
 using RetroCamera.Patches;
+using RetroCamera.Systems;
 using UnityEngine;
 using static RetroCamera.Configuration.Keybinding;
 using static RetroCamera.Configuration.KeybindsManager;
@@ -19,6 +20,7 @@ internal static class Settings
     public static bool CommandWheelEnabled { get => _commandWheelEnabled.Value; set => _commandWheelEnabled.SetValue(value); }
     public static bool AlwaysShowCrosshair { get => _alwaysShowCrosshairOption.Value; set => _alwaysShowCrosshairOption.SetValue(value); }
     public static bool ActionModeCrosshair { get => _actionModeCrosshairOption.Value; set => _actionModeCrosshairOption.SetValue(value); }
+    public static bool HoldActionModeKey { get => _holdActionModeKeyOption.Value; set => _holdActionModeKeyOption.SetValue(value); }
     public static float FieldOfView { get => _fieldOfViewOption.Value; set => _fieldOfViewOption.SetValue(value); }
     public static bool ShowVignette { get => _showVignette.Value; set => _showVignette.SetValue(value); }
     public static bool SkipIntro { get => _skipIntro.Value; set => _skipIntro.SetValue(value); }
@@ -57,6 +59,7 @@ internal static class Settings
     static Slider _crosshairSize;
     static Toggle _alwaysShowCrosshairOption;
     static Toggle _actionModeCrosshairOption;
+    static Toggle _holdActionModeKeyOption;
     static Toggle _hideCharacterInfoPanel;
     static Toggle _defaultBuildModeCamera;
 
@@ -118,6 +121,77 @@ internal static class Settings
         _toggleSocialWheel.AddKeyUpListener(action);
 
     public static bool _wasDisabled = false;
+    static void HandleActionModeKeyDown()
+    {
+        if (HoldActionModeKey)
+        {
+            TryEnterActionMode();
+            return;
+        }
+
+        if (_isActionMode)
+        {
+            TryExitActionMode();
+        }
+        else
+        {
+            TryEnterActionMode();
+        }
+    }
+    static void HandleActionModeKeyUp()
+    {
+        if (!HoldActionModeKey) return;
+
+        TryExitActionMode();
+    }
+    static void TryEnterActionMode()
+    {
+        if (_isFirstPerson) return;
+        if (EscapeMenuViewPatch._isServerPaused) return;
+
+        bool enabledTemporarily = false;
+
+        if (!Enabled)
+        {
+            if (IsMenuOpen) return;
+
+            enabledTemporarily = true;
+            _enabledOption.SetValue(true);
+        }
+
+        _wasDisabled = enabledTemporarily;
+
+        UpdateActionModeState(true);
+    }
+    static void TryExitActionMode()
+    {
+        if (_isFirstPerson) return;
+        if (!_isActionMode && !_wasDisabled) return;
+
+        UpdateActionModeState(false);
+
+        if (_wasDisabled)
+        {
+            _wasDisabled = false;
+            _enabledOption.SetValue(false);
+        }
+    }
+    static void UpdateActionModeState(bool enabled)
+    {
+        RetroCamera.ActionMode(enabled);
+
+        if (IsMenuOpen) IsMenuOpen = false;
+        if (ActionWheelSystemPatch._wheelVisible) ActionWheelSystemPatch._wheelVisible = false;
+
+        if (_isActionMode && _isMouseLocked && !Cursor.lockState.Equals(CursorLockMode.Locked))
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+        else if (!enabled && Cursor.lockState.Equals(CursorLockMode.Locked) && (!_isActionMode || !_isMouseLocked))
+        {
+            Cursor.lockState = CursorLockMode.None;
+        }
+    }
     static void RegisterOptions()
     {
         // Core.Log.LogWarning("Registering options...");
@@ -127,6 +201,7 @@ internal static class Settings
         _commandWheelEnabled = AddToggle("Command Wheel", "Enable command wheel", false);
         _alwaysShowCrosshairOption = AddToggle("Always Show Crosshair", "Keep crosshair visible always", false);
         _actionModeCrosshairOption = AddToggle("Action Mode Crosshair", "Show crosshair during action mode", false);
+        _holdActionModeKeyOption = AddToggle("Hold Action Mode Key", "Hold the action mode key instead of toggling", false);
         _hideCharacterInfoPanel = AddToggle("Hide Character Info Panel", "Removes character info panel from the top of the screen during action mode", false);
         _defaultBuildModeCamera = AddToggle("Default Build Menu Camera", "Use the default camera when entering build mode.", false);
         _fieldOfViewOption = AddSlider("FOV", "Camera field of view", 50, 90, 60);
@@ -208,55 +283,8 @@ internal static class Settings
         });
 
         _actionModeKeybind = AddKeybind("Toggle Action Mode", "Toggle action mode", KeyCode.RightBracket);
-        _actionModeKeybind.AddKeyDownListener(() =>
-        {
-            if (_wasDisabled && Enabled && !_isFirstPerson)
-            {
-                _wasDisabled = false;
-                _isMouseLocked = !_isMouseLocked;
-                _isActionMode = !_isActionMode;
-
-                if (IsMenuOpen) IsMenuOpen = false;
-                if (ActionWheelSystemPatch._wheelVisible) ActionWheelSystemPatch._wheelVisible = false;
-                if (Cursor.lockState.Equals(CursorLockMode.Locked) && (!_isActionMode || !_isMouseLocked))
-                {
-                    Cursor.lockState = CursorLockMode.None;
-                }
-
-                _enabledOption.SetValue(false);
-            }
-            else if (Enabled && !_isFirstPerson)
-            {
-                _isMouseLocked = !_isMouseLocked;
-                _isActionMode = !_isActionMode;
-
-                if (IsMenuOpen) IsMenuOpen = false;
-                if (ActionWheelSystemPatch._wheelVisible) ActionWheelSystemPatch._wheelVisible = false;
-                if (Cursor.lockState.Equals(CursorLockMode.Locked) && (!_isActionMode || !_isMouseLocked))
-                {
-                    Cursor.lockState = CursorLockMode.None;
-                }
-
-                // _cursorPosition = Input.mousePosition;
-            }
-            else if (!Enabled && !_isFirstPerson && !IsMenuOpen && !EscapeMenuViewPatch._isServerPaused)
-            {
-                _wasDisabled = true;
-                _enabledOption.SetValue(true);
-
-                _isMouseLocked = !_isMouseLocked;
-                _isActionMode = !_isActionMode;
-
-                if (IsMenuOpen) IsMenuOpen = false;
-                if (ActionWheelSystemPatch._wheelVisible) ActionWheelSystemPatch._wheelVisible = false;
-                if (Cursor.lockState.Equals(CursorLockMode.Locked) && (!_isActionMode || !_isMouseLocked))
-                {
-                    Cursor.lockState = CursorLockMode.None;
-                }
-
-                // _cursorPosition = Input.mousePosition;
-            }
-        });
+        _actionModeKeybind.AddKeyDownListener(HandleActionModeKeyDown);
+        _actionModeKeybind.AddKeyUpListener(HandleActionModeKeyUp);
 
         _toggleHUDKeybind = AddKeybind("Toggle HUD", "Toggle HUD visibility", KeyCode.Backslash);
 
