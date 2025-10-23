@@ -1,12 +1,12 @@
 ﻿namespace RetroCamera.Configuration;
 internal static class OptionsManager
 {
-    public enum OptionItemType 
-    { 
-        Toggle, 
-        Slider, 
-        Dropdown, 
-        Divider 
+    public enum OptionItemType
+    {
+        Toggle,
+        Slider,
+        Dropdown,
+        Divider
     }
     public class OptionEntry(OptionItemType type, string key)
     {

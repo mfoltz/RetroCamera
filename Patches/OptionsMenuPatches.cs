@@ -51,7 +51,7 @@ internal static class OptionsMenuPatches
             }
         }
         */
-        
+
         if (_shouldLocalize)
         {
             Core.Log.LogWarning("[OptionsPanel_Interface.Start()] Attempting to localize keys...");
@@ -82,7 +82,7 @@ internal static class OptionsMenuPatches
 
                         Toggle toggle = toggleOption as Toggle;
                         var toggleEntry = UIHelper.InstantiatePrefabUnderAnchor(__instance.CheckboxPrefab, __instance.ContentNode);
-                        
+
                         toggleEntry.Initialize(
                             toggle.NameKey,
                             new Il2CppSystem.Nullable_Unboxed<LocalizationKey>(toggle.DescKey),
@@ -99,7 +99,7 @@ internal static class OptionsMenuPatches
 
                         Slider slider = sliderOption as Slider;
                         var sliderEntry = UIHelper.InstantiatePrefabUnderAnchor(__instance.SliderPrefab, __instance.ContentNode);
-                        
+
                         sliderEntry.Initialize(
                             slider.NameKey,
                             new Il2CppSystem.Nullable_Unboxed<LocalizationKey>(slider.DescKey),
@@ -122,7 +122,7 @@ internal static class OptionsMenuPatches
                         Dropdown dropdown = dropdownOption as Dropdown;
                         var dropdownEntry = UIHelper.InstantiatePrefabUnderAnchor(__instance.DropdownPrefab, __instance.ContentNode);
                         var dropdownOptions = new Il2CppSystem.Collections.Generic.List<string>(dropdown.Values.Count);
-                        
+
                         foreach (var value in dropdown.Values)
                             dropdownOptions.Add(value);
 

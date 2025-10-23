@@ -5,6 +5,7 @@ using ProjectM.Physics;
 using ProjectM.Scripting;
 using ProjectM.Sequencer;
 using ProjectM.UI;
+using RetroCamera.Behaviours;
 using RetroCamera.Patches;
 using RetroCamera.Utilities;
 using System.Collections;
@@ -13,7 +14,7 @@ using Unity.Entities;
 using UnityEngine;
 
 namespace RetroCamera;
-internal class Core
+internal static class Core
 {
     public static World _client;
 
@@ -91,6 +92,7 @@ internal class Core
         ClearSkies.Reset();
         TopdownCameraSystemHooks.Dispose();
         Systems.RetroCamera.ResetState();
+        CameraBehaviour.ResetState();
 
         _initialized = false;
         _localCharacter = Entity.Null;

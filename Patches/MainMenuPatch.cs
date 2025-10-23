@@ -18,7 +18,7 @@ internal static class MainMenuPatch
     {
         try
         {
-            Core.Log.LogWarning($"[MainMenuNewView.SetConsoleReady]");
+            // Core.Log.LogWarning($"[MainMenuNewView.SetConsoleReady]");
             _mainMenuNewView = UnityEngine.Object.FindObjectOfType<MainMenuNewView>();
             _newsPanel = _mainMenuNewView.News;
 
@@ -52,7 +52,7 @@ internal static class MainMenuPatch
         }
         catch (Exception ex)
         {
-            Core.Log.LogWarning($"[MainMenuNewView.SetConsoleReady] error: {ex}");
+            Core.Log.LogWarning($"[SetConsoleReady] error: {ex}");
         }
     }
     public static void Reset()
@@ -277,19 +277,11 @@ internal static class MainMenuPatch
         stream.Read(array, 0, array.Length);
 
         Texture2D texture2D = new(2, 2, TextureFormat.RGBA32, mipChain: false, linear: false);
-        ImageConversion.LoadImage(texture2D, array, markNonReadable: false);
-
-        texture2D.filterMode = filterMode;          
-        texture2D.wrapMode = TextureWrapMode.Clamp;      
+        texture2D.LoadImage(array, markNonReadable: false);
+        texture2D.filterMode = filterMode;
+        texture2D.wrapMode = TextureWrapMode.Clamp;
 
         return texture2D;
-    }
-    static void OpenURLs(List<string> urls)
-    {
-        foreach (string url in urls)
-        {
-            Application.OpenURL(url);
-        }
     }
     public static GameObject FindTargetGameObject(Transform root, string targetName)
     {

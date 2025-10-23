@@ -27,15 +27,14 @@ internal abstract class CameraBehaviour
     public virtual bool ShouldActivate(ref TopdownCameraState state) => false;
     public virtual unsafe void HandleInput(ref InputState inputState)
     {
-        if (!_validGameplayInputState || !inputState.InputsPressed.IsCreated) return;
+        if (!_validGameplayInputState || !inputState.InputsPressed.IsCreated)
+            return;
 
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape)
+            && EscapeMenuViewPatch._isEscapeMenuOpen)
         {
-            if (EscapeMenuViewPatch._isEscapeMenuOpen)
-            {
-                IsMenuOpen = false;
-                EscapeMenuViewPatch._isEscapeMenuOpen = false;
-            }
+            IsMenuOpen = false;
+            EscapeMenuViewPatch._isEscapeMenuOpen = false;
         }
 
         if (_isMouseLocked && !IsMenuOpen && !inputState.IsInputPressed(ButtonInputAction.RotateCamera))
@@ -43,10 +42,7 @@ internal abstract class CameraBehaviour
             inputState.InputsPressed.m_ListData->AddNoResize(ButtonInputAction.RotateCamera);
         }
 
-        // Manually manage camera zoom
         float zoomValue = inputState.GetAnalogValue(AnalogInputAction.ZoomCamera);
-
-        // if (zoomValue != 0 && (!_inBuildMode || !Settings.ActiveDuringBuildMode))
         if (zoomValue != 0 && !_inBuildMode)
         {
             var zoomAmount = Mathf.Lerp(.25f, 1.5f, Mathf.Max(0, _targetZoom - Settings.MinZoom) / Settings.MaxZoom);
@@ -58,47 +54,106 @@ internal abstract class CameraBehaviour
             inputState.SetAnalogValue(AnalogInputAction.ZoomCamera, 0);
         }
 
-        // Update zoom if MaxZoom is changed
-        if (_targetZoom > Settings.MaxZoom) _targetZoom = Settings.MaxZoom;
+        if (_targetZoom > Settings.MaxZoom)
+            _targetZoom = Settings.MaxZoom;
 
         if (SocialWheelActive)
         {
             Core.ActionWheelSystem.UpdateAndShowWheel(SocialWheel, inputState);
-            // Core.ActionWheelSystem._CurrentActiveWheel = SocialWheel;
-            // Core.Log.LogWarning($"[RetroCamera] UsingActionWheel");
         }
     }
     public virtual void UpdateCameraInputs(ref TopdownCameraState state, ref TopdownCamera data)
     {
         _inBuildMode = state.InBuildMode;
+        bool defaultBuildMode = Settings.DefaultBuildModeCamera;
 
         if (!_isBuildSettingsSet)
         {
+            /*
+            _buildModeZoomSettings = new ZoomSettings
+            {
+                MaxPitch = data.BuildModeZoomSettings.MaxPitch,
+                MinPitch = data.BuildModeZoomSettings.MinPitch,
+                MaxZoom = data.BuildModeZoomSettings.MaxZoom,
+                MinZoom = data.BuildModeZoomSettings.MinZoom
+            };
+            */
+
+            /*
+            _buildModeZoomSettings = new ZoomSettings
+            {
+                MaxPitch = Settings.MaxPitch,
+                MinPitch = Settings.MinPitch,
+                MaxZoom = Settings.MaxZoom,
+                MinZoom = Settings.MinZoom
+            };
+            */
+
             _buildModeZoomSettings = data.BuildModeZoomSettings;
             _isBuildSettingsSet = true;
         }
 
-        // Set camera behaviour pitch settings
-        state.ZoomSettings.MaxPitch = DefaultMaxPitch;
-        state.ZoomSettings.MinPitch = DefaultMinPitch;
+        if (state.InBuildMode)
+        {
+            data.BuildZoomEnabled = defaultBuildMode;
 
+            if (!defaultBuildMode)
+            {
+                // Set camera pitch settings
+                state.ZoomSettings.MaxPitch = DefaultMaxPitch;
+                state.ZoomSettings.MinPitch = DefaultMinPitch;
+
+                // Set camera zoom settings
+                state.LastTarget.Zoom = _targetZoom;
+                state.Target.Zoom = _targetZoom;
+            }
+            else
+            {
+                data.BuildModeZoomSettings = _buildModeZoomSettings;
+
+                state.LastTarget.Zoom = data.BuildModeZoomDistance;
+                state.Target.Zoom = data.BuildModeZoomDistance;
+            }
+        }
+        else
+        {
+            // Set camera pitch settings
+            state.ZoomSettings.MaxPitch = DefaultMaxPitch;
+            state.ZoomSettings.MinPitch = DefaultMinPitch;
+
+            // Set camera zoom settings
+            state.LastTarget.Zoom = _targetZoom;
+            state.Target.Zoom = _targetZoom;
+        }
+
+        /*
+        // Always set zoom?
         // Manually set zoom if not in build mode
-        // if (!state.InBuildMode || !Settings.ActiveDuringBuildMode)
         if (!state.InBuildMode)
         {
-            data.BuildModeZoomSettings.MaxPitch = DefaultMaxPitch;
-            data.BuildModeZoomSettings.MinPitch = DefaultMinPitch;
+            // data.BuildModeZoomSettings.MaxPitch = DefaultMaxPitch;
+            // data.BuildModeZoomSettings.MinPitch = DefaultMinPitch;
 
             state.LastTarget.Zoom = _targetZoom;
             state.Target.Zoom = _targetZoom;
         }
-        // else if (state.InBuildMode && Settings.ActiveDuringBuildMode)
-        else if (state.InBuildMode)
+        if (state.InBuildMode)
         {
-            data.BuildModeZoomSettings = _buildModeZoomSettings;
+            data.BuildZoomEnabled = true;
 
-            state.LastTarget.Zoom = data.BuildModeZoomDistance;
-            state.Target.Zoom = data.BuildModeZoomDistance;
+            // data.BuildModeZoomSettings.MaxZoom = Settings.MaxZoom;
+            // data.BuildModeZoomSettings.MinZoom = Settings.MinZoom;
+
+            // data.BuildModeZoomSettings.MaxPitch = DefaultMaxPitch;
+            // data.BuildModeZoomSettings.MinPitch = DefaultMinPitch;
+
+            state.LastTarget.Zoom = _targetZoom;
+            state.Target.Zoom = _targetZoom;
         }
+        */
+    }
+    public static void ResetState()
+    {
+        _isBuildSettingsSet = false;
     }
 }

@@ -88,11 +88,11 @@ internal static class ClearSkies
     }
     static void GetDayNightCycleSingleton()
     {
-        _dayNightCycleSingleton = SingletonAccessor<DayNightCycle>.TryGetSingletonEntityWasteful(EntityManager, out _dayNightCycleSingleton) 
+        _dayNightCycleSingleton = SingletonAccessor<DayNightCycle>.TryGetSingletonEntityWasteful(EntityManager, out _dayNightCycleSingleton)
             ? _dayNightCycleSingleton : Entity.Null;
-        
+
         bool exists = _dayNightCycleSingleton.Exists();
-        
+
         // Core.Log.LogWarning($"[ClearSkies] DayNightCycle singleton from accessor: {exists}");
 
         if (exists) _initialized = true;

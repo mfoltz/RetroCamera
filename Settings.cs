@@ -24,6 +24,7 @@ internal static class Settings
     public static bool SkipIntro { get => _skipIntro.Value; set => _skipIntro.SetValue(value); }
     public static float CrosshairSize { get => _crosshairSize.Value; set => _crosshairSize.SetValue(value); }
     public static bool HideCharacterInfoPanel { get => _hideCharacterInfoPanel.Value; set => _hideCharacterInfoPanel.SetValue(value); }
+    public static bool DefaultBuildModeCamera { get => _defaultBuildModeCamera.Value; set => _defaultBuildModeCamera.SetValue(value); }
     public static int AimOffsetX { get => (int)(Screen.width * (_aimOffsetXOption.Value / 100)); set => _aimOffsetXOption.SetValue(Mathf.Clamp(value / Screen.width, -25, 25)); }
     public static int AimOffsetY { get => (int)(Screen.height * (_aimOffsetYOption.Value / 100)); set => _aimOffsetYOption.SetValue(Mathf.Clamp(value / Screen.width, -25, 25)); }
     public static bool LockZoom { get => _lockCameraZoomOption.Value; set => _lockCameraZoomOption.SetValue(value); }
@@ -57,6 +58,7 @@ internal static class Settings
     static Toggle _alwaysShowCrosshairOption;
     static Toggle _actionModeCrosshairOption;
     static Toggle _hideCharacterInfoPanel;
+    static Toggle _defaultBuildModeCamera;
 
     static Slider _aimOffsetXOption;
     static Slider _aimOffsetYOption;
@@ -104,7 +106,7 @@ internal static class Settings
         _enabledOption.AddListener(handler);
     public static void AddFieldOfViewListener(FloatChanged handler) =>
         _fieldOfViewOption.AddListener(handler);
-    public static void AddHideHUDListener(KeyHandler action) => 
+    public static void AddHideHUDListener(KeyHandler action) =>
         _toggleHUDKeybind.AddKeyDownListener(action);
     public static void AddHideFogListener(KeyHandler action) =>
         _toggleFogKeybind.AddKeyDownListener(action);
@@ -126,6 +128,7 @@ internal static class Settings
         _alwaysShowCrosshairOption = AddToggle("Always Show Crosshair", "Keep crosshair visible always", false);
         _actionModeCrosshairOption = AddToggle("Action Mode Crosshair", "Show crosshair during action mode", false);
         _hideCharacterInfoPanel = AddToggle("Hide Character Info Panel", "Removes character info panel from the top of the screen during action mode", false);
+        _defaultBuildModeCamera = AddToggle("Default Build Menu Camera", "Use the default camera when entering build mode.", false);
         _fieldOfViewOption = AddSlider("FOV", "Camera field of view", 50, 90, 60);
         _showVignette = AddToggle("Show Vignette", "Shows or hides the vignette", true);
         _skipIntro = AddToggle("Skip Intro", "Skip the intro when launching game", true);
@@ -219,7 +222,7 @@ internal static class Settings
                 {
                     Cursor.lockState = CursorLockMode.None;
                 }
-                
+
                 _enabledOption.SetValue(false);
             }
             else if (Enabled && !_isFirstPerson)
@@ -272,7 +275,7 @@ internal static class Settings
             Core.Log.LogWarning("No options saved!");
             return false;
         }
-            
+
 
         foreach (var (key, loadedOption) in loaded)
         {

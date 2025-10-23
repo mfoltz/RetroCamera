@@ -18,7 +18,7 @@ internal static class TopdownCameraSystemHooks
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     unsafe delegate void HandleInputHandler(
-        IntPtr _this, 
+        IntPtr _this,
         ref InputState inputState);
 
     static HandleInputHandler? _handleInputOriginal;
@@ -88,7 +88,7 @@ internal static class TopdownCameraSystemHooks
         {
             Core.Log.LogError($"Failed to create UpdateCamera detour: {e}");
         }
-        
+
         try
         {
             _cursorPositionExecuteDetour = NativeDetour.Create(
@@ -218,7 +218,7 @@ internal static class TopdownCameraSystemHooks
             return;
         }
 
-        _usingMouseWheel = _gameplayInputState.IsInputPressed(ButtonInputAction.ToggleEmoteWheel) 
+        _usingMouseWheel = _gameplayInputState.IsInputPressed(ButtonInputAction.ToggleEmoteWheel)
             || _gameplayInputState.IsInputPressed(ButtonInputAction.ToggleActionWheel);
 
         if (_usingMouseWheel)

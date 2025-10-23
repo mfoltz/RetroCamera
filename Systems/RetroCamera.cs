@@ -9,6 +9,7 @@ using UnityEngine.UI;
 using static RetroCamera.Configuration.QuipManager;
 using static RetroCamera.Utilities.CameraState;
 using static RetroCamera.Patches.MoodManagerComponentPatch;
+using RetroCamera.Utilities;
 
 namespace RetroCamera.Systems;
 public class RetroCamera : MonoBehaviour
@@ -236,6 +237,11 @@ public class RetroCamera : MonoBehaviour
             }
         }
 
+        if (Core.LocalCharacter.TryGetComponent(out Mounter mounter))
+        {
+            CameraState._isMounted = mounter.MountEntity.Exists();
+        }
+
         UpdateCrosshair();
     }
     void OnApplicationFocus(bool hasFocus)
@@ -297,13 +303,10 @@ public class RetroCamera : MonoBehaviour
             bool rotatingCamera = false;
             if (_validGameplayInputState) rotatingCamera = _gameplayInputState.IsInputPressed(ButtonInputAction.RotateCamera);
 
-            bool shouldHandle = _validGameplayInputState && 
+            bool shouldHandle = _validGameplayInputState &&
                (_isMouseLocked || rotatingCamera);
 
-            if (_cachedVignette != null)
-            {
-                _cachedVignette.active = Settings.ShowVignette;
-            }
+            _cachedVignette?.active = Settings.ShowVignette;
 
             if (shouldHandle && !IsMenuOpen)
             {
