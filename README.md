@@ -33,6 +33,8 @@ Yes, this has action mode (right bracket default, can rebind). Streamlined Moder
 1. Clone this repository.
 2. Run `./scripts/init.sh` to install the .NET SDK (if missing), restore NuGet dependencies (including `VRising.Unhollowed.Client`), and invoke a Release build with the appropriate `dotnet build` command. The script maintains a repo-local `.dotnet` folder so contributors without a global installation can still compile the mod.
 
+   > **Tip:** Use this script for local verification and continuous integration checks instead of calling `dotnet build` directly; it guarantees the same SDK channel and NuGet feeds that the project depends on.
+
 The V Rising client assemblies are delivered through the `VRising.Unhollowed.Client` NuGet package, so no manual extraction into a `third_party/` directory is required.
 
 ### Manual build
