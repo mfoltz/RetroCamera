@@ -36,7 +36,8 @@ Yes, this has action mode (right bracket default, can rebind). Streamlined Moder
 
 ### Manual build
 
-- To build manually after dependencies are prepared, run `dotnet build RetroCamera.csproj --configuration Release`.
+- Restore NuGet packages with `dotnet restore RetroCamera.csproj --source https://api.nuget.org/v3/index.json --source https://nuget.bepinex.dev/v3/index.json`.
+- After restoring packages, build with `dotnet build RetroCamera.csproj --configuration Release --no-restore`.
 - Visual Studio users can open `RetroCamera.csproj`, select the **Release** configuration, and build the project directly.
 
 ## Credits
