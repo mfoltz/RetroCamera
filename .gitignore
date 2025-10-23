@@ -294,6 +294,8 @@ __pycache__/
 *.lutconfig
 build/
 dist/
+third_party/
+/.dotnet/
 /Bloodcraft.sln
 /*.sln
 /TODO.txt

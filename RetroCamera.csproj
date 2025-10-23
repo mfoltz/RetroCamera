@@ -18,17 +18,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove=".editorconfig" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EditorConfigFiles Include=".editorconfig" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
     <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.733" />
-    <PackageReference Include="VRising.ReferenceAssemblies" Version="1.1.10.1-r94466-b2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="VRising.GameData" Condition="Exists('third_party/VRising.GameData.dll')">
+      <HintPath>third_party/VRising.GameData.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
