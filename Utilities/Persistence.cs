@@ -1,5 +1,6 @@
 ﻿using BepInEx;
 using RetroCamera.Configuration;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -14,7 +15,10 @@ internal static class Persistence
     {
         WriteIndented = true,
         IncludeFields = true,
-        Converters = { new MenuOptionJsonConverter() }
+        Converters =
+        {
+            new MenuOptionJsonConverter()
+        }
     };
 
     static readonly string _directoryPath = Path.Join(Paths.ConfigPath, MyPluginInfo.PLUGIN_NAME);
@@ -22,23 +26,71 @@ internal static class Persistence
     const string KEYBINDS_KEY = "Keybinds";
     const string OPTIONS_KEY = "Options";
     const string COMMANDS_KEY = "Commands";
+    const string COMMAND_CATEGORIES_KEY = "CommandCategories";
 
     static readonly string _keybindsJson = Path.Combine(_directoryPath, $"{KEYBINDS_KEY}.json");
     static readonly string _settingsJson = Path.Combine(_directoryPath, $"{OPTIONS_KEY}.json");
     static readonly string _commandsJson = Path.Combine(_directoryPath, $"{COMMANDS_KEY}.json");
+    static readonly string _commandCategoriesJson = Path.Combine(_directoryPath, $"{COMMAND_CATEGORIES_KEY}.json");
 
     static readonly Dictionary<string, string> _filePaths = new()
     {
         {KEYBINDS_KEY, _keybindsJson },
         {OPTIONS_KEY, _settingsJson },
-        {COMMANDS_KEY, _commandsJson }
+        {COMMANDS_KEY, _commandsJson },
+        {COMMAND_CATEGORIES_KEY, _commandCategoriesJson }
     };
     public static void SaveKeybinds() => SaveDictionary(Keybinds, KEYBINDS_KEY);
     public static void SaveOptions() => SaveDictionary(Options, OPTIONS_KEY);
     public static void SaveCommands() => SaveDictionary(CommandQuips, COMMANDS_KEY);
+    public static void SaveCommandCategories()
+    {
+        var categories = QuipManager.GetCategories();
+        var dtoDictionary = new Dictionary<byte, CommandCategoryDto>();
+
+        foreach (var pair in categories)
+        {
+            var category = pair.Value;
+
+            var entries = new List<CommandCategoryEntryDto>();
+            foreach (var entry in category.Entries)
+            {
+                var commandQuip = entry.Value;
+                var quipDto = new CommandQuipDto
+                {
+                    Name = commandQuip.Name ?? string.Empty,
+                    Command = commandQuip.Command ?? string.Empty
+                };
+
+                entries.Add(new CommandCategoryEntryDto
+                {
+                    Slot = entry.Key,
+                    Quip = quipDto
+                });
+            }
+
+            var quipSlots = category.QuipSlots != null && category.QuipSlots.Count > 0
+                ? new List<byte>(category.QuipSlots)
+                : new List<byte>();
+
+            dtoDictionary[pair.Key] = new CommandCategoryDto
+            {
+                Name = category.Name ?? string.Empty,
+                QuipSlots = quipSlots,
+                Entries = entries
+            };
+        }
+
+        SaveDictionary(dtoDictionary, COMMAND_CATEGORIES_KEY);
+    }
     public static Dictionary<string, Keybinding> LoadKeybinds() => LoadDictionary<string, Keybinding>(KEYBINDS_KEY);
     public static Dictionary<string, MenuOption> LoadOptions() => LoadDictionary<string, MenuOption>(OPTIONS_KEY);
     public static Dictionary<byte, Command> LoadCommands() => LoadDictionary<byte, Command>(COMMANDS_KEY);
+    public static Dictionary<byte, CommandCategoryDto> LoadCommandCategories()
+    {
+        var loaded = LoadDictionary<byte, CommandCategoryDto>(COMMAND_CATEGORIES_KEY);
+        return loaded ?? new Dictionary<byte, CommandCategoryDto>();
+    }
     static Dictionary<T, U> LoadDictionary<T, U>(string fileKey)
     {
         if (!_filePaths.TryGetValue(fileKey, out string filePath)) return null;
@@ -95,6 +147,24 @@ internal static class Persistence
             Core.Log.LogWarning($"Failed to serialize {fileKey} contents: {ex.Message}");
         }
     }
+}
+internal sealed class CommandCategoryDto
+{
+    public string Name { get; set; } = string.Empty;
+    public List<byte> QuipSlots { get; set; } = new();
+    public List<CommandCategoryEntryDto> Entries { get; set; } = new();
+}
+
+internal sealed class CommandCategoryEntryDto
+{
+    public byte Slot { get; set; }
+    public CommandQuipDto Quip { get; set; } = new();
+}
+
+internal sealed class CommandQuipDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Command { get; set; } = string.Empty;
 }
 internal class MenuOptionJsonConverter : JsonConverter<MenuOption>
 {
