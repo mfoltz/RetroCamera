@@ -11,6 +11,8 @@ using Unity.Physics;
 using Unity.Transforms;
 using UnityEngine;
 using static RetroCamera.Utilities.CameraState;
+using HarmonyLib;
+using System.Reflection;
 
 namespace RetroCamera.Patches;
 #nullable enable
@@ -63,48 +65,104 @@ internal static class TopdownCameraSystemHooks
 
     static bool _defaultZoomSettingsSaved;
     static bool _usingDefaultZoomSettings;
+    static bool _initialized;
     public static unsafe void Initialize()
     {
+        if (_initialized)
+        {
+            return;
+        }
+
+        bool success = true;
+
         try
         {
+            var handleInputMethod = typeof(TopdownCameraSystem).GetMethod("HandleInput", AccessTools.all);
+            var handleInputAddress = MethodResolver.ResolveFromMethodInfo(handleInputMethod);
+            Core.Log.LogInfo($"Resolved HandleInput address: {handleInputAddress}");
             _handleInputDetour = NativeDetour.Create(typeof(TopdownCameraSystem), "HandleInput", HandleInputPatch, out _handleInputOriginal);
         }
         catch (Exception e)
         {
             Core.Log.LogError($"Failed to create HandleInput detour: {e}");
+            success = false;
         }
 
         try
         {
+            var updateCameraType = typeof(TopdownCameraSystem)
+                .GetNestedTypes()
+                .First(t => t.Name.Contains("CameraUpdateJob") && t.GetMethod("UpdateCamera", AccessTools.all) != null);
+            var updateCameraMethod = updateCameraType.GetMethod("UpdateCamera", AccessTools.all);
+            var updateCameraAddress = MethodResolver.ResolveFromMethodInfo(updateCameraMethod);
+            Core.Log.LogInfo($"Resolved UpdateCamera address: {updateCameraAddress}");
             _updateCameraDetour = NativeDetour.Create(
-            typeof(TopdownCameraSystem),
-            "CameraUpdateJob",
-            "UpdateCamera",
-            UpdateCameraPatch,
-            out _updateCameraOriginal
+                typeof(TopdownCameraSystem),
+                "CameraUpdateJob",
+                "UpdateCamera",
+                UpdateCameraPatch,
+                out _updateCameraOriginal
             );
         }
         catch (Exception e)
         {
             Core.Log.LogError($"Failed to create UpdateCamera detour: {e}");
+            success = false;
         }
 
         try
         {
-            _cursorPositionExecuteDetour = NativeDetour.Create(
-            typeof(CursorPositionSystem),                                   // The containing type
-            "CursorPositionSystem_59A0B5A3_LambdaJob_0_Execute",            // The method name
-            CursorPositionExecutePatch,         // Our patch method
-            out _cursorPositionExecuteOriginal
+            Type containerType = typeof(CursorPositionSystem);
+            bool hasLambdaJob0 = containerType.GetNestedTypes().Any(t => t.Name.Contains("LambdaJob_0"));
+
+            Func<Type, bool> nestedTypePredicate = t => hasLambdaJob0 ? t.Name.Contains("LambdaJob_0") : t.Name.Contains("LambdaJob");
+            Func<MethodInfo, bool> methodPredicate = m =>
+            {
+                if (m.IsStatic)
+                {
+                    return false;
+                }
+
+                if (!(m.Name == "Execute" || m.Name.EndsWith("_Execute")))
+                {
+                    return false;
+                }
+
+                var targetParams = typeof(CursorPositionExecuteHandler)
+                    .GetMethod("Invoke")!
+                    .GetParameters()
+                    .Skip(1)
+                    .Select(p => p.ParameterType);
+
+                return m.GetParameters()
+                    .Select(p => p.ParameterType)
+                    .SequenceEqual(targetParams);
+            };
+
+            var nestedType = containerType.GetNestedTypes().First(nestedTypePredicate);
+            var cursorMethod = nestedType.GetMethods(AccessTools.all).First(methodPredicate);
+            var cursorAddress = MethodResolver.ResolveFromMethodInfo(cursorMethod);
+            Core.Log.LogInfo($"Resolved CursorPosition Execute address: {cursorAddress}");
+
+            _cursorPositionExecuteDetour = NativeDetour.CreateBySignature<CursorPositionExecuteHandler>(
+                containerType,
+                nestedTypePredicate,
+                methodPredicate,
+                CursorPositionExecutePatch,
+                out _cursorPositionExecuteOriginal
             );
         }
         catch (Exception e)
         {
             Core.Log.LogError($"Failed to create CursorPositionExecute detour: {e}");
+            success = false;
         }
 
         try
         {
+            var handleGamepadMethod = typeof(GamepadCursorSystem).GetMethod("HandleInput", AccessTools.all);
+            var handleGamepadAddress = MethodResolver.ResolveFromMethodInfo(handleGamepadMethod);
+            Core.Log.LogInfo($"Resolved Gamepad HandleInput address: {handleGamepadAddress}");
             _handleGamepadDetour = NativeDetour.Create(
                 typeof(GamepadCursorSystem),
                 "HandleInput",
@@ -115,6 +173,12 @@ internal static class TopdownCameraSystemHooks
         catch (Exception ex)
         {
             Core.Log.LogError($"Failed to create HandleGamepadInput detour: {ex}");
+            success = false;
+        }
+
+        if (success)
+        {
+            _initialized = true;
         }
     }
     static unsafe void HandleInputPatch(IntPtr _this, ref InputState inputState)
@@ -271,5 +335,6 @@ internal static class TopdownCameraSystemHooks
         _updateCameraDetour?.Dispose();
         _cursorPositionExecuteDetour?.Dispose();
         _handleGamepadDetour?.Dispose();
+        _initialized = false;
     }
 }
