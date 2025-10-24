@@ -26,6 +26,8 @@ public class RetroCamera : MonoBehaviour
     static Camera _gameCamera;
 
     static GeneralGameplayCollection? _generalGameplayCollection;
+    static readonly Dictionary<byte, ChatQuip> _originalChatQuips = new();
+    static readonly Dictionary<byte, ActionWheelData> _originalActionWheelData = new();
     static readonly LocalizationKey EmptyLocalizationKey = LocalizationManager.GetLocalizationKey(string.Empty);
 
     static bool _gameFocused = true;
@@ -170,6 +172,8 @@ public class RetroCamera : MonoBehaviour
         try
         {
             _generalGameplayCollection = generalGameplayCollection;
+            _originalChatQuips.Clear();
+            _originalActionWheelData.Clear();
             ClearActiveCategory();
 
             var categories = GetCategories();
@@ -211,6 +215,70 @@ public class RetroCamera : MonoBehaviour
         {
             Core.Log.LogError(ex);
         }
+    }
+
+    static bool TryEnsureGeneralGameplayCollection()
+    {
+        if (_generalGameplayCollection.HasValue)
+            return true;
+
+        if (!_rootPrefabCollection.Exists())
+            return false;
+
+        if (_rootPrefabCollection.TryGetComponent(out RootPrefabCollection rootPrefabCollection)
+            && rootPrefabCollection.GeneralGameplayCollectionPrefab.TryGetComponent(out GeneralGameplayCollection generalGameplayCollection))
+        {
+            _generalGameplayCollection = generalGameplayCollection;
+            return true;
+        }
+
+        return false;
+    }
+
+    internal static void ShowCategoryMenu()
+    {
+        if (!TryEnsureGeneralGameplayCollection())
+            return;
+
+        var actionWheelSystem = ActionWheelSystem;
+        var generalGameplayCollection = _generalGameplayCollection;
+
+        if (actionWheelSystem == null || !generalGameplayCollection.HasValue)
+            return;
+
+        var socialWheelData = ActionWheelSystem._SocialWheelDataList;
+
+        if (socialWheelData == null || socialWheelData.Count == 0)
+            return;
+
+        var generalGameplayCollectionValue = generalGameplayCollection.Value;
+
+        int slotLimit = Math.Min(generalGameplayCollectionValue.ChatQuips.Length, socialWheelData.Count);
+
+        if (slotLimit == 0)
+            return;
+
+        var categories = GetCategories();
+        var usedSlots = new HashSet<byte>();
+
+        foreach (var categoryPair in categories)
+        {
+            byte slot = categoryPair.Key;
+
+            if (slot >= slotLimit)
+                continue;
+
+            var category = categoryPair.Value;
+            UpdateSocialWheelSlot(generalGameplayCollectionValue, slot, category.NameKey, true);
+            usedSlots.Add(slot);
+        }
+
+        ClearUnusedSocialWheelSlots(usedSlots);
+        RefreshSocialWheelDisplay();
+    }
+
+    static void RefreshSocialWheelDisplay()
+    {
     }
 
     internal static bool ShowCategoryQuips(byte categorySlot)
@@ -343,33 +411,6 @@ public class RetroCamera : MonoBehaviour
             socialWheelData[slot] = wheelData;
         }
     }
-    }
-
-    static void UpdateSocialWheelSlot(GeneralGameplayCollection generalGameplayCollection, byte slot, Stunlock.Localization.LocalizationKey nameKey, bool isCategory)
-    {
-        if (slot < generalGameplayCollection.ChatQuips.Length)
-        {
-            ChatQuip chatQuip = generalGameplayCollection.ChatQuips[slot];
-            chatQuip.Text = nameKey;
-
-            if (isCategory)
-            {
-                chatQuip.Sequence = default;
-            }
-
-            generalGameplayCollection.ChatQuips[slot] = chatQuip;
-        }
-
-        var socialWheelData = ActionWheelSystem._SocialWheelDataList;
-
-        if (slot < socialWheelData.Count)
-        {
-            ActionWheelData wheelData = socialWheelData[slot];
-            wheelData.Name = nameKey;
-            socialWheelData[slot] = wheelData;
-        }
-    }
-
 
     static void SocialWheelKeyUp()
     {
@@ -548,6 +589,8 @@ public class RetroCamera : MonoBehaviour
         _shouldActivateWheel = false;
         _rootPrefabCollection = Entity.Null;
         _generalGameplayCollection = null;
+        _originalChatQuips.Clear();
+        _originalActionWheelData.Clear();
     }
 }
 
