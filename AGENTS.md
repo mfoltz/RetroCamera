@@ -7,6 +7,12 @@
 
 ---
 
+## Build & Testing
+
+* **Primary build command:** Run `dotnet build RetroCamera.csproj` from the repository root to validate changes compile.
+* **Record results:** Include the exact command and outcome in task reports. If the CLI is unavailable in the environment, note the failure explicitly instead of omitting the check.
+
+---
 ## Strong Typing & Domain Modeling
 
 * **Favor classes and structs over loose data structures:**  
