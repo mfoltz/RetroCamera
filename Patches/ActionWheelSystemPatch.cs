@@ -110,13 +110,23 @@ internal static class ActionWheelSystemPatch
     [HarmonyPrefix]
     static bool HideCurrentWheelPrefix(ActionWheelSystem __instance)
     {
+        bool closingSocialWheel = SocialWheel != null && __instance?._CurrentActiveWheel == SocialWheel;
+        bool shouldResetWheel = SocialWheelActive || closingSocialWheel || ActiveCategory.HasValue;
+
+        if (shouldResetWheel)
+        {
+            ClearActiveCategory();
+            ShowCategoryMenu();
+        }
+
+        if (!_wheelOpened.Equals(DateTime.MinValue))
+        {
+            _wheelOpened = DateTime.MinValue;
+        }
+
         if (SocialWheelActive)
         {
             return false;
-        }
-        else if (!_wheelOpened.Equals(DateTime.MinValue))
-        {
-            _wheelOpened = DateTime.MinValue;
         }
 
         return true;

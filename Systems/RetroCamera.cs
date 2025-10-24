@@ -377,6 +377,9 @@ public class RetroCamera : MonoBehaviour
 
         if (_socialWheelActive)
         {
+            ClearActiveCategory();
+            ShowCategoryMenu();
+
             _socialWheelActive = false;
             ActionWheelSystem.HideCurrentWheel();
             _socialWheel.gameObject.SetActive(false);
