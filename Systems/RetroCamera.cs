@@ -265,73 +265,6 @@ public class RetroCamera : MonoBehaviour
         return true;
     }
 
-    internal static void ShowCategoryMenu()
-    {
-        if (!TryEnsureGeneralGameplayCollection())
-            return;
-
-        var generalGameplayCollection = _generalGameplayCollection;
-
-        if (!generalGameplayCollection.HasValue)
-            return;
-
-        UpdateSocialWheelQuips(generalGameplayCollection.Value);
-
-        var usedSlots = new HashSet<byte>();
-
-        foreach (var categoryPair in GetCategories())
-        {
-            usedSlots.Add(categoryPair.Key);
-
-            foreach (var entry in categoryPair.Value.Entries)
-            {
-                usedSlots.Add(entry.Key);
-            }
-        }
-
-        foreach (var commandPair in CommandQuips)
-        {
-            usedSlots.Add(commandPair.Key);
-        }
-
-        ClearUnusedSocialWheelSlots(usedSlots);
-        RefreshSocialWheelDisplay();
-    }
-
-    static void RefreshSocialWheelDisplay()
-    {
-        if (SocialWheel == null)
-            return;
-
-        if (!_validGameplayInputState)
-            return;
-
-        var actionWheelSystem = ActionWheelSystem;
-
-        if (actionWheelSystem == null)
-            return;
-
-        actionWheelSystem.UpdateAndShowWheel(SocialWheel, _gameplayInputState);
-    }
-
-    static bool TryEnsureGeneralGameplayCollection()
-    {
-        if (_generalGameplayCollection.HasValue)
-            return true;
-
-        if (!_rootPrefabCollection.Exists())
-            return false;
-
-        if (_rootPrefabCollection.TryGetComponent(out RootPrefabCollection rootPrefabCollection)
-            && rootPrefabCollection.GeneralGameplayCollectionPrefab.TryGetComponent(out GeneralGameplayCollection generalGameplayCollection))
-        {
-            _generalGameplayCollection = generalGameplayCollection;
-            return true;
-        }
-
-        return false;
-    }
-
     static void ClearUnusedSocialWheelSlots(ISet<byte> usedSlots)
     {
         var generalGameplayCollection = _generalGameplayCollection;
@@ -359,8 +292,57 @@ public class RetroCamera : MonoBehaviour
             if (usedSlots != null && usedSlots.Contains(slot))
                 continue;
 
+            bool restored = false;
+
+            if (_originalChatQuips.TryGetValue(slot, out var originalQuip))
+            {
+                generalGameplayCollectionValue.ChatQuips[slot] = originalQuip;
+                restored = true;
+            }
+
+            if (_originalActionWheelData.TryGetValue(slot, out var originalWheelData))
+            {
+                socialWheelData[slot] = originalWheelData;
+                restored = true;
+            }
+
+            if (restored)
+                continue;
+
             UpdateSocialWheelSlot(generalGameplayCollectionValue, slot, EmptyLocalizationKey, true);
         }
+    }
+
+    static void UpdateSocialWheelSlot(GeneralGameplayCollection generalGameplayCollection, byte slot, LocalizationKey nameKey, bool isCategory)
+    {
+        if (slot < generalGameplayCollection.ChatQuips.Length)
+        {
+            if (!_originalChatQuips.ContainsKey(slot))
+                _originalChatQuips[slot] = generalGameplayCollection.ChatQuips[slot];
+
+            ChatQuip chatQuip = generalGameplayCollection.ChatQuips[slot];
+            chatQuip.Text = nameKey;
+
+            if (isCategory)
+            {
+                chatQuip.Sequence = default;
+            }
+
+            generalGameplayCollection.ChatQuips[slot] = chatQuip;
+        }
+
+        var socialWheelData = ActionWheelSystem._SocialWheelDataList;
+
+        if (slot < socialWheelData.Count)
+        {
+            if (!_originalActionWheelData.ContainsKey(slot))
+                _originalActionWheelData[slot] = socialWheelData[slot];
+
+            ActionWheelData wheelData = socialWheelData[slot];
+            wheelData.Name = nameKey;
+            socialWheelData[slot] = wheelData;
+        }
+    }
     }
 
     static void UpdateSocialWheelSlot(GeneralGameplayCollection generalGameplayCollection, byte slot, Stunlock.Localization.LocalizationKey nameKey, bool isCategory)
