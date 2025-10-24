@@ -1,5 +1,6 @@
 ﻿using ProjectM;
 using ProjectM.Sequencer;
+using System.Collections.Generic;
 using ProjectM.UI;
 using RetroCamera.Behaviours;
 using RetroCamera.Configuration;
@@ -123,19 +124,7 @@ public class RetroCamera : MonoBehaviour
             if (!_socialWheelInitialized && _rootPrefabCollection.TryGetComponent(out RootPrefabCollection rootPrefabCollection)
                 && rootPrefabCollection.GeneralGameplayCollectionPrefab.TryGetComponent(out GeneralGameplayCollection generalGameplayCollection))
             {
-                foreach (var commandQuip in CommandQuips)
-                {
-                    if (string.IsNullOrEmpty(commandQuip.Value.Name)
-                        || string.IsNullOrEmpty(commandQuip.Value.Command))
-                        continue;
-
-                    ChatQuip chatQuip = generalGameplayCollection.ChatQuips[commandQuip.Key];
-                    chatQuip.Text = commandQuip.Value.NameKey;
-
-                    // Core.Log.LogWarning($"[RetroCamera] QuipData - {commandQuip.Value.Name} | {commandQuip.Value.Command} | {chatQuip.Sequence} | {chatQuip.Sequence.ToPrefabGUID()}");
-
-                    generalGameplayCollection.ChatQuips[commandQuip.Key] = chatQuip;
-                }
+                UpdateSocialWheelQuips(generalGameplayCollection);
 
                 ActionWheelSystem.InitializeSocialWheel(true, generalGameplayCollection);
                 _socialWheelInitialized = true;
@@ -147,31 +136,6 @@ public class RetroCamera : MonoBehaviour
                 catch (Exception ex)
                 {
                     Core.Log.LogError($"[RetroCamera.Update] Failed to localize keys - {ex.Message}");
-                }
-
-                try
-                {
-                    var chatQuips = generalGameplayCollection.ChatQuips;
-                    var socialWheelData = ActionWheelSystem._SocialWheelDataList;
-                    var socialWheelShortcuts = ActionWheelSystem._SocialWheelShortcutList;
-
-                    // Core.Log.LogWarning($"[RetroCamera] SocialWheelData count - {socialWheelData.Count} | {chatQuips.Length}");
-
-                    foreach (var commandQuip in CommandQuips)
-                    {
-                        if (string.IsNullOrEmpty(commandQuip.Value.Name)
-                            || string.IsNullOrEmpty(commandQuip.Value.Command))
-                            continue;
-
-                        ActionWheelData wheelData = socialWheelData[commandQuip.Key];
-
-                        // Core.Log.LogWarning($"[RetroCamera] WheelData - {commandQuip.Value.Name} | {commandQuip.Value.Command} | {wheelData.Name}");
-                        wheelData.Name = commandQuip.Value.NameKey;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Core.Log.LogError(ex);
                 }
             }
 
@@ -194,6 +158,79 @@ public class RetroCamera : MonoBehaviour
             // Core.Log.LogWarning($"[RetroCamera] Activating wheel");
         }
     }
+    static void UpdateSocialWheelQuips(GeneralGameplayCollection generalGameplayCollection)
+    {
+        try
+        {
+            ClearActiveCategory();
+
+            var categories = GetCategories();
+            var processedSlots = new HashSet<byte>();
+
+            foreach (var categoryPair in categories)
+            {
+                byte categorySlot = categoryPair.Key;
+                var category = categoryPair.Value;
+
+                UpdateSocialWheelSlot(generalGameplayCollection, categorySlot, category.NameKey, true);
+                processedSlots.Add(categorySlot);
+
+                foreach (var entry in category.Entries)
+                {
+                    byte quipSlot = entry.Key;
+                    var commandQuip = entry.Value;
+
+                    if (commandQuip.IsEmpty)
+                        continue;
+
+                    UpdateSocialWheelSlot(generalGameplayCollection, quipSlot, commandQuip.NameKey, false);
+                    processedSlots.Add(quipSlot);
+                }
+            }
+
+            foreach (var commandPair in CommandQuips)
+            {
+                byte slot = commandPair.Key;
+                var commandQuip = commandPair.Value;
+
+                if (!processedSlots.Add(slot) || commandQuip.IsEmpty)
+                    continue;
+
+                UpdateSocialWheelSlot(generalGameplayCollection, slot, commandQuip.NameKey, false);
+            }
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError(ex);
+        }
+    }
+
+    static void UpdateSocialWheelSlot(GeneralGameplayCollection generalGameplayCollection, byte slot, Stunlock.Localization.LocalizationKey nameKey, bool isCategory)
+    {
+        if (slot < generalGameplayCollection.ChatQuips.Length)
+        {
+            ChatQuip chatQuip = generalGameplayCollection.ChatQuips[slot];
+            chatQuip.Text = nameKey;
+
+            if (isCategory)
+            {
+                chatQuip.Sequence = default;
+            }
+
+            generalGameplayCollection.ChatQuips[slot] = chatQuip;
+        }
+
+        var socialWheelData = ActionWheelSystem._SocialWheelDataList;
+
+        if (slot < socialWheelData.Count)
+        {
+            ActionWheelData wheelData = socialWheelData[slot];
+            wheelData.Name = nameKey;
+            socialWheelData[slot] = wheelData;
+        }
+    }
+
+
     static void SocialWheelKeyUp()
     {
         if (!Settings.CommandWheelEnabled) return;
