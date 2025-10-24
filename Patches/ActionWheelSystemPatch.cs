@@ -57,11 +57,49 @@ internal static class ActionWheelSystemPatch
         if ((now - _lastQuipSendTime).TotalSeconds < QUIP_COOLDOWN_SECONDS)
             return false;
 
-        _lastQuipSendTime = now;
-
-        if (TryGetQuip(index, out CommandQuip commandQuip))
+        if (ActiveCategory.HasValue)
         {
-            SendCommandQuip(commandQuip);
+            if (index == 0)
+            {
+                ClearActiveCategory();
+                ShowCategoryMenu();
+                return false;
+            }
+
+            if (index > 0)
+            {
+                byte quipIndex = (byte)(index - 1);
+
+                if (TryGetQuip(quipIndex, out CommandQuip commandQuip))
+                {
+                    _lastQuipSendTime = now;
+                    SendCommandQuip(commandQuip);
+                    return false;
+                }
+
+                ClearActiveCategory();
+                ShowCategoryMenu();
+                return false;
+            }
+        }
+        else if (TryGetCategory(index, out CommandCategory category) && category.HasEntries)
+        {
+            if (SetActiveCategory(index))
+            {
+                if (!ShowCategoryQuips(index))
+                {
+                    ClearActiveCategory();
+                    ShowCategoryMenu();
+                }
+
+                return false;
+            }
+        }
+
+        if (TryGetQuip(index, out CommandQuip fallbackQuip))
+        {
+            _lastQuipSendTime = now;
+            SendCommandQuip(fallbackQuip);
             return false;
         }
 
