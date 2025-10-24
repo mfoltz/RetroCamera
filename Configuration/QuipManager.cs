@@ -63,20 +63,59 @@ internal static class QuipManager
 
     public static void TryLoadCommands()
     {
-        var loaded = Persistence.LoadCommands();
+        Dictionary<byte, Command> loadedCommands = Persistence.LoadCommands();
 
-        if (loaded == null)
+        if (loadedCommands == null)
         {
             return;
         }
 
+        Dictionary<byte, CommandCategoryDto> loadedCategories = Persistence.LoadCommandCategories() ?? new Dictionary<byte, CommandCategoryDto>();
+
         _commandQuips.Clear();
 
-        foreach (var keyValuePair in loaded)
+        foreach (KeyValuePair<byte, Command> commandPair in loadedCommands)
         {
-            var slot = keyValuePair.Key;
-            Command command = keyValuePair.Value;
+            byte slot = commandPair.Key;
+            Command command = commandPair.Value;
             _commandQuips[slot] = new CommandQuip(command.Name, command.InputString);
+        }
+
+        ClearCategories();
+
+        if (loadedCategories.Count > 0)
+        {
+            foreach (KeyValuePair<byte, CommandCategoryDto> categoryPair in loadedCategories)
+            {
+                byte categorySlot = categoryPair.Key;
+                CommandCategoryDto categoryDto = categoryPair.Value ?? new CommandCategoryDto();
+
+                List<byte> quipSlots = categoryDto.QuipSlots != null && categoryDto.QuipSlots.Count > 0
+                    ? new List<byte>(categoryDto.QuipSlots)
+                    : new List<byte>();
+
+                if (categoryDto.Entries != null && categoryDto.Entries.Count > 0)
+                {
+                    foreach (CommandCategoryEntryDto entry in categoryDto.Entries)
+                    {
+                        if (entry == null)
+                        {
+                            continue;
+                        }
+
+                        CommandQuipDto quipDto = entry.Quip ?? new CommandQuipDto();
+                        byte entrySlot = entry.Slot;
+                        _commandQuips[entrySlot] = new CommandQuip(quipDto.Name, quipDto.Command);
+
+                        if (!quipSlots.Contains(entrySlot))
+                        {
+                            quipSlots.Add(entrySlot);
+                        }
+                    }
+                }
+
+                SetCategory(categorySlot, categoryDto.Name ?? string.Empty, quipSlots);
+            }
         }
 
         RefreshCategories();

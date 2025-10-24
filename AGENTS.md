@@ -7,6 +7,12 @@
 
 ---
 
+## Build & Testing
+
+* **Bootstrap with the init script first:** From the repository root run `./scripts/init.sh` to install the expected .NET SDK (if missing), restore packages, and build in Release. Capture the full command output and note success or any environment-related failures.
+* **Direct builds remain valid:** When the `dotnet` CLI is already available, you may additionally run `dotnet build RetroCamera.csproj --configuration Release` from the repository root. Continue to report the exact command(s) and their outcomes.
+
+---
 ## Strong Typing & Domain Modeling
 
 * **Favor classes and structs over loose data structures:**  
