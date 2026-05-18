@@ -2,44 +2,123 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing GitHub Release tag to publish to Thunderstore, such as v1.5.4-pre. Thunderstore receives X.Y.Z.
+        required: true
+        type: string
 
 jobs:
   release_on_thunderstore:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '6.0.x'
-          dotnet-quality: 'preview'
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Extract Latest Tag
-        id: extract_tag
-        run: |
-          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-          echo "latest_tag=$latest_tag" >> $GITHUB_ENV
+      - name: Validate canonical version metadata
+        id: version_metadata
         shell: bash
+        run: bash .codex/scripts/version-metadata.sh
 
-      - name: Set Release Tag
-        run: echo "RELEASE_TAG=${{ env.latest_tag }}" >> $GITHUB_ENV
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Select eligible release tag
+        id: select_tag
+        shell: bash
+        run: |
+          canonical_version='${{ steps.version_metadata.outputs.canonical_version }}'
+          requested_tag='${{ inputs.release_tag }}'
+
+          allowed_tag_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(-pre)?$'
+          allowed_package_version_pattern='^[0-9]+\.[0-9]+\.[0-9]+$'
+
+          if [[ -z "$requested_tag" ]]; then
+            echo "Error: release_tag input is required." >&2
+            exit 1
+          fi
+
+          if [[ ! "$requested_tag" =~ $allowed_tag_pattern ]]; then
+            echo "Error: Release tag '$requested_tag' is not an allowed Thunderstore source tag." >&2
+            echo "Expected one of: vX.Y.Z or vX.Y.Z-pre." >&2
+            exit 1
+          fi
+
+          if ! git rev-parse -q --verify "refs/tags/$requested_tag" >/dev/null; then
+            echo "Error: Release tag '$requested_tag' was not found in this checkout." >&2
+            exit 1
+          fi
+
+          release_version="${requested_tag#v}"
+          package_version="${release_version%-pre}"
+
+          if [[ "$release_version" != "$canonical_version" && "$release_version" != "$canonical_version-pre" ]]; then
+            echo "Error: Release tag '$requested_tag' does not align with canonical version '$canonical_version'." >&2
+            exit 1
+          fi
+
+          echo "Selected Thunderstore tag: $requested_tag"
+          echo "GitHub release version: $release_version"
+          echo "Thunderstore package version: $package_version"
+
+          echo "RELEASE_TAG=$requested_tag" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
+          echo "PACKAGE_VERSION=$package_version" >> "$GITHUB_ENV"
+          echo "ALLOWED_TAG_PATTERN=$allowed_tag_pattern" >> "$GITHUB_ENV"
+          echo "ALLOWED_PACKAGE_VERSION_PATTERN=$allowed_package_version_pattern" >> "$GITHUB_ENV"
+
+      - name: Preserve release helper scripts
+        shell: bash
+        run: |
+          cp .codex/scripts/prerelease-notes.sh "$RUNNER_TEMP/prerelease-notes.sh"
+          chmod +x "$RUNNER_TEMP/prerelease-notes.sh"
 
       - name: Download Release
-        run: |
-          gh release download ${{ env.RELEASE_TAG }} -D ./dist
+        run: gh release download "$RELEASE_TAG" -D ./dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
 
-      - name: Install Thunderstore CLI (tcli)
+      - name: Validate downloaded release changelog
+        shell: bash
+        run: |
+          bash "$RUNNER_TEMP/prerelease-notes.sh" \
+            --changelog ./dist/CHANGELOG.md \
+            --version "$PACKAGE_VERSION" \
+            --tag "$RELEASE_TAG" \
+            --check-only
+        env:
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          PACKAGE_VERSION: ${{ env.PACKAGE_VERSION }}
+
+      - name: Install Thunderstore CLI
         run: dotnet tool install --global tcli
 
       - name: Publish build to Thunderstore
+        shell: bash
         run: |
-          trimmed_tag=${RELEASE_TAG:1}
-          tcli publish --token ${{ secrets.THUNDERSTORE_KEY }} --package-version $trimmed_tag
+          if [[ ! $RELEASE_TAG =~ $ALLOWED_TAG_PATTERN ]]; then
+            echo "Error: Release tag '$RELEASE_TAG' is not an allowed Thunderstore source tag." >&2
+            exit 1
+          fi
+
+          if [[ ! $PACKAGE_VERSION =~ $ALLOWED_PACKAGE_VERSION_PATTERN ]]; then
+            echo "Error: Package version '$PACKAGE_VERSION' derived from '$RELEASE_TAG' is not an allowed Thunderstore package version." >&2
+            exit 1
+          fi
+
+          echo "Publishing Thunderstore package version: $PACKAGE_VERSION"
+          tcli publish --token "$THUNDERSTORE_KEY" --package-version "$PACKAGE_VERSION"
         env:
           RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          PACKAGE_VERSION: ${{ env.PACKAGE_VERSION }}
+          ALLOWED_TAG_PATTERN: ${{ env.ALLOWED_TAG_PATTERN }}
+          ALLOWED_PACKAGE_VERSION_PATTERN: ${{ env.ALLOWED_PACKAGE_VERSION_PATTERN }}
+          THUNDERSTORE_KEY: ${{ secrets.THUNDERSTORE_KEY }}

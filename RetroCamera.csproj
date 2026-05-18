@@ -12,6 +12,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <DeployToClient>false</DeployToClient>
+    <ClientPluginDirectory Condition="'$(ClientPluginDirectory)' == ''">C:\Program Files (x86)\Steam\steamapps\common\VRising\BepInEx\plugins</ClientPluginDirectory>
     <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
     <RunGenerateREADME Condition="'$(RunGenerateREADME)' == ''">true</RunGenerateREADME>
     <RunGenerateREADME Condition="'$(RunGenerateREADME)' == 'true' and Exists('$(MSBuildThisFileDirectory).git')">false</RunGenerateREADME>
@@ -34,7 +36,7 @@
     <None Include=".github\workflows\release.yml" />
   </ItemGroup>
 
-  <Target Name="BuildToClient" AfterTargets="Build">
-    <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="C:\Program Files (x86)\Steam\steamapps\common\VRising\BepInEx\plugins" />
+  <Target Name="BuildToClient" AfterTargets="Build" Condition="'$(DeployToClient)' == 'true'">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ClientPluginDirectory)" SkipUnchangedFiles="true" />
   </Target>
 </Project>

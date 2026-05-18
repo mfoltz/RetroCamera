@@ -296,6 +296,8 @@ build/
 dist/
 third_party/
 /.dotnet/
+.codex/artifacts/
+.codex/runs/
 /Bloodcraft.sln
 /*.sln
 /TODO.txt
