@@ -47,11 +47,17 @@ function Test-PrereleaseNotesIncludesChangelogAndDetailsCard {
         $ChangelogPath = Join-Path $FixtureRoot "CHANGELOG.md"
         $OutputPath = Join-Path $FixtureRoot "prerelease-notes.md"
         Set-Content -Path $ChangelogPath -Value @'
-`1.2.3`
+# Changelog
+
+## Unreleased
+
+## v1.2.3
+
 - fixed the camera timing
 - added release validation
 
-`1.2.2`
+## v1.2.2
+
 - previous release
 '@
 
@@ -73,7 +79,7 @@ function Test-PrereleaseNotesIncludesChangelogAndDetailsCard {
         }
 
         Assert-Match -Text $Notes -Pattern '<img src="https://raw\.githubusercontent\.com/mfoltz/RetroCamera/1234567890abcdef/\.github/assets/ts_badge\.png"' -Message "Release notes did not include the Thunderstore badge image."
-        Assert-Match -Text $Notes -Pattern 'Changelog.*1\.2\.3' -Message "Release notes did not include the changelog cue."
+        Assert-Match -Text $Notes -Pattern '## Unreleased.*empty' -Message "Release notes did not describe changelog turnover."
         Assert-Match -Text $Notes -Pattern 'Branch.*main' -Message "Release notes did not include the branch cue."
         Assert-Match -Text $Notes -Pattern 'Commit.*1234567890ab' -Message "Release notes did not include the short commit."
         Assert-Match -Text $Notes -Pattern 'Run.*42' -Message "Release notes did not include the workflow run cue."
@@ -92,7 +98,12 @@ function Test-PrereleaseNotesRejectsMissingVersionEntry {
     try {
         $ChangelogPath = Join-Path $FixtureRoot "CHANGELOG.md"
         Set-Content -Path $ChangelogPath -Value @'
-`1.2.2`
+# Changelog
+
+## Unreleased
+
+## v1.2.2
+
 - previous release
 '@
 

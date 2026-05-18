@@ -38,7 +38,7 @@ read_thunderstore_version() {
 
 read_latest_changelog_entry() {
     local entry
-    entry=$(sed -n '/^`[^`][^`]*`$/ { s/^`//; s/`$//; p; q; }' "$CHANGELOG_PATH" | tr -d '\r')
+    entry=$(sed -n 's/^## v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)$/\1/p' "$CHANGELOG_PATH" | head -n 1 | tr -d '\r')
 
     if [ -z "$entry" ]; then
         fail "Unable to determine the latest CHANGELOG entry from $CHANGELOG_PATH."

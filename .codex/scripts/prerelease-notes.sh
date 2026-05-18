@@ -29,7 +29,7 @@ Options:
   --commit SHA       Source commit SHA for the notes card.
   --run-id ID        GitHub Actions run id for the notes card.
   --output PATH      Markdown file to write.
-  --check-only       Validate changelog entry without writing notes.
+  --check-only       Validate changelog turnover without writing notes.
 EOF
 }
 
@@ -90,10 +90,26 @@ if [ ! -f "$CHANGELOG_PATH" ]; then
     fail "Unable to locate changelog at '$CHANGELOG_PATH'."
 fi
 
+if ! grep -Eq '^##[[:space:]]*Unreleased[[:space:]]*$' "$CHANGELOG_PATH"; then
+    fail "CHANGELOG.md must contain a ## Unreleased section before creating or publishing a prerelease."
+fi
+
+unreleased_body=$(
+    awk '
+        /^##[[:space:]]*Unreleased[[:space:]]*$/ { in_unreleased = 1; next }
+        in_unreleased && /^## / { exit }
+        in_unreleased { print }
+    ' "$CHANGELOG_PATH"
+)
+
+if printf '%s' "$unreleased_body" | grep -q '[^[:space:]]'; then
+    fail "CHANGELOG.md ## Unreleased must be empty before creating or publishing a prerelease."
+fi
+
 version_body=$(
     awk -v version="$VERSION" '
-        $0 == "`" version "`" { in_version = 1; next }
-        in_version && /^`[^`]+`[[:space:]]*$/ { exit }
+        $0 == "## v" version { in_version = 1; next }
+        in_version && /^## / { exit }
         in_version { print }
     ' "$CHANGELOG_PATH"
 )
@@ -103,7 +119,7 @@ if ! printf '%s' "$version_body" | grep -q '[^[:space:]]'; then
 fi
 
 if [ "$CHECK_ONLY" = "true" ]; then
-    echo "prerelease-notes: changelog entry validated for $VERSION."
+    echo "prerelease-notes: changelog turnover validated for $VERSION."
     exit 0
 fi
 
@@ -140,7 +156,7 @@ ${handoff_heading}
 
 | Signal | Detail |
 | --- | --- |
-| Changelog | Notes below come from the \`${VERSION}\` entry. |
+| Changelog | \`## Unreleased\` is empty; notes below come from \`v${VERSION}\`. |
 | Branch | \`${BRANCH}\` |
 | Commit | \`${short_commit}\` |
 | Run | ${run_detail} |

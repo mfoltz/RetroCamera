@@ -1,7 +1,9 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version
+    [string]$Version,
+
+    [switch]$AllowEmptyChangelog
 )
 
 Set-StrictMode -Version Latest
@@ -12,6 +14,7 @@ $RepoRoot = Split-Path -Parent (Split-Path -Parent $ScriptRoot)
 
 $ProjectPath = Join-Path $RepoRoot "RetroCamera.csproj"
 $ThunderstorePath = Join-Path $RepoRoot "thunderstore.toml"
+$ChangelogPath = Join-Path $RepoRoot "CHANGELOG.md"
 
 function Set-TextPreservingUtf8Bom {
     param(
@@ -25,6 +28,44 @@ function Set-TextPreservingUtf8Bom {
     $HasUtf8Bom = $Bytes.Length -ge 3 -and $Bytes[0] -eq 0xEF -and $Bytes[1] -eq 0xBB -and $Bytes[2] -eq 0xBF
     $Encoding = [System.Text.UTF8Encoding]::new($HasUtf8Bom)
     [System.IO.File]::WriteAllText($Path, $Value, $Encoding)
+}
+
+function Update-Changelog {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$Version,
+        [Parameter(Mandatory = $true)]
+        [bool]$AllowEmpty
+    )
+
+    $Text = Get-Content -Raw -Path $Path
+
+    if ($Text -notmatch '(?m)^# Changelog\s*$') {
+        throw "CHANGELOG.md must start with a '# Changelog' heading."
+    }
+
+    $VersionHeadingPattern = '(?m)^## v' + [regex]::Escape($Version) + '$'
+    if ($Text -match $VersionHeadingPattern) {
+        throw "CHANGELOG.md already contains a v$Version entry."
+    }
+
+    $UnreleasedPattern = '(?ms)^## Unreleased\s*(?<body>.*?)(?=^## |\z)'
+    $Match = [regex]::Match($Text, $UnreleasedPattern)
+    if (-not $Match.Success) {
+        throw "CHANGELOG.md must contain an '## Unreleased' section before bumping."
+    }
+
+    $Body = $Match.Groups["body"].Value.Trim()
+    if (-not $AllowEmpty -and [string]::IsNullOrWhiteSpace($Body)) {
+        throw "CHANGELOG.md '## Unreleased' is empty. Use -AllowEmptyChangelog to bump anyway."
+    }
+
+    $ReleasedBody = if ([string]::IsNullOrWhiteSpace($Body)) { "- No user-facing changes recorded." } else { $Body }
+    $Replacement = "## Unreleased`r`n`r`n## v$Version`r`n`r`n$ReleasedBody`r`n`r`n"
+    $Updated = $Text.Substring(0, $Match.Index) + $Replacement + $Text.Substring($Match.Index + $Match.Length)
+    Set-TextPreservingUtf8Bom -Path $Path -Value $Updated
 }
 
 function Update-FirstMatch {
@@ -62,5 +103,6 @@ Update-FirstMatch `
     -Replacement "versionNumber = `"$Version`"" `
     -Description "Thunderstore version"
 
-Write-Host "Updated RetroCamera project and Thunderstore version metadata to $Version."
-Write-Host "CHANGELOG.md was not changed; add the matching version entry manually before release validation."
+Update-Changelog -Path $ChangelogPath -Version $Version -AllowEmpty:$AllowEmptyChangelog.IsPresent
+
+Write-Host "Updated RetroCamera version metadata to $Version."

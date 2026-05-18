@@ -58,12 +58,23 @@ function Get-ProjectVersion {
 
 function Get-LatestChangelogEntry {
     foreach ($Line in Get-Content -Path $ChangelogPath) {
-        if ($Line -match '^`(?<version>\d+\.\d+\.\d+)`$') {
+        if ($Line -match '^## v(?<version>\d+\.\d+\.\d+)$') {
             return $Matches["version"]
         }
     }
 
     return $null
+}
+
+function Get-UnreleasedBody {
+    $Text = Get-Content -Raw -Path $ChangelogPath
+    $Match = [regex]::Match($Text, '(?ms)^## Unreleased\s*(?<body>.*?)(?=^## |\z)')
+
+    if (-not $Match.Success) {
+        return $null
+    }
+
+    return $Match.Groups["body"].Value.Trim()
 }
 
 function Test-MeaningfulPath {
@@ -138,6 +149,8 @@ foreach ($Line in $Numstat) {
 $ProjectVersion = Get-ProjectVersion
 $LatestChangelogEntry = Get-LatestChangelogEntry
 $ChangelogChanged = @($ChangedFiles | Where-Object { $_ -eq "CHANGELOG.md" }).Count -gt 0
+$UnreleasedBody = Get-UnreleasedBody
+$HasUnreleasedNotes = -not [string]::IsNullOrWhiteSpace($UnreleasedBody)
 $script:NudgeCount = 0
 
 if ([string]::IsNullOrWhiteSpace($ProjectVersion)) {
@@ -149,8 +162,12 @@ elseif ([string]::IsNullOrWhiteSpace($LatestChangelogEntry)) {
 elseif ($ProjectVersion -ne $LatestChangelogEntry -and -not $ChangelogChanged) {
     Write-Nudge "RetroCamera version metadata is $ProjectVersion, but the latest CHANGELOG.md entry is $LatestChangelogEntry. Add the matching human-owned changelog entry before release."
 }
-elseif ($ChangedLines -ge $LineThreshold -and -not $ChangelogChanged) {
-    Write-Host "release-nudge: meaningful changes detected, and CHANGELOG.md remains human-owned with latest entry $LatestChangelogEntry."
+elseif (($ChangedLines -ge $LineThreshold) -and -not $ChangelogChanged -and -not $HasUnreleasedNotes) {
+    Write-Nudge "Meaningful RetroCamera changes detected ($ChangedLines changed lines across $($MeaningfulFiles.Count) files). Consider adding CHANGELOG.md notes before release."
+}
+
+if ($HasUnreleasedNotes) {
+    Write-Nudge "RetroCamera CHANGELOG.md has Unreleased notes. Before a release-bound merge, consider running .codex/scripts/bump-version.ps1 so version metadata and changelog stay aligned."
 }
 
 if ($script:NudgeCount -eq 0) {

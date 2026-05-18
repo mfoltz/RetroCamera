@@ -94,10 +94,16 @@ versionNumber = "1.2.3"
 "@ -NoNewline
 
     Set-Content -Path (Join-Path $FixtureRoot "CHANGELOG.md") -Value @'
-`1.2.3`
+# Changelog
+
+## Unreleased
+
+## v1.2.3
+
 - current release
 
-`1.2.2`
+## v1.2.2
+
 - previous release
 '@ -NoNewline
 
@@ -115,6 +121,18 @@ versionNumber = "1.2.3"
 function Test-BumpVersionUpdatesMetadataButLeavesChangelog {
     $FixtureRoot = New-FixtureRepo
     try {
+        Set-Content -Path (Join-Path $FixtureRoot "CHANGELOG.md") -Value @'
+# Changelog
+
+## Unreleased
+
+- current release
+
+## v1.2.3
+
+- previous release
+'@ -NoNewline
+
         & pwsh -NoProfile -File (Join-Path $FixtureRoot ".codex/scripts/bump-version.ps1") -Version "1.2.4"
         if ($LASTEXITCODE -ne 0) {
             throw "bump-version.ps1 exited with $LASTEXITCODE"
@@ -126,7 +144,7 @@ function Test-BumpVersionUpdatesMetadataButLeavesChangelog {
 
         Assert-Match -Text $ProjectText -Pattern '<Version>1\.2\.4</Version>' -Message "Project version was not updated."
         Assert-Match -Text $ThunderstoreText -Pattern 'versionNumber = "1\.2\.4"' -Message "Thunderstore version was not updated."
-        Assert-NotMatch -Text $ChangelogText -Pattern '`1\.2\.4`' -Message "Changelog should remain human-owned and unchanged by bump-version."
+        Assert-Match -Text $ChangelogText -Pattern '(?m)^## Unreleased\s+## v1\.2\.4\s+- current release' -Message "Changelog release entry was not created."
     }
     finally {
         Remove-Item -LiteralPath $FixtureRoot -Recurse -Force
@@ -153,7 +171,10 @@ function Test-ReleaseNudgeAllowsCurrentChangelogEntry {
 function Test-ReleaseNudgeBlocksWhenVersionMissingFromChangelog {
     $FixtureRoot = New-FixtureRepo
     try {
-        & pwsh -NoProfile -File (Join-Path $FixtureRoot ".codex/scripts/bump-version.ps1") -Version "1.2.4" | Out-Null
+        $ProjectPath = Join-Path $FixtureRoot "RetroCamera.csproj"
+        $ThunderstorePath = Join-Path $FixtureRoot "thunderstore.toml"
+        (Get-Content -Raw -Path $ProjectPath).Replace("<Version>1.2.3</Version>", "<Version>1.2.4</Version>") | Set-Content -Path $ProjectPath -NoNewline
+        (Get-Content -Raw -Path $ThunderstorePath).Replace('versionNumber = "1.2.3"', 'versionNumber = "1.2.4"') | Set-Content -Path $ThunderstorePath -NoNewline
 
         $Output = & pwsh -NoProfile -File (Join-Path $FixtureRoot ".codex/scripts/release-nudge.ps1") -BaseRef "main" 2>&1 | Out-String
         Assert-Equal -Actual "$LASTEXITCODE" -Expected "1" -Message "Release nudge should block when version metadata outruns the changelog."
