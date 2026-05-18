@@ -1,86 +1,382 @@
 name: Build
 
 on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - codex/feature-testing
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  validate_build_inputs:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check_release.outputs.should_build }}
+      reason: ${{ steps.check_release.outputs.reason }}
+      canonical_version: ${{ steps.version_metadata.outputs.canonical_version }}
+      matched_tag: ${{ steps.check_release.outputs.matched_tag }}
+      csproj_file: ${{ steps.discover_csproj.outputs.csproj_file }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Discover .csproj
+        id: discover_csproj
+        shell: bash
+        run: |
+          csproj_file=$(find . -type f -name '*.csproj' \
+            -not -path '*/bin/*' \
+            -not -path '*/obj/*' \
+            -not -path '*/.codex/*' | head -n 1)
+
+          if [ -z "$csproj_file" ]; then
+            echo "Unable to locate a .csproj file." >&2
+            exit 1
+          fi
+
+          echo "csproj_file=$csproj_file" >> "$GITHUB_OUTPUT"
+
+      - name: Validate canonical version metadata
+        id: version_metadata
+        shell: bash
+        run: bash .codex/scripts/version-metadata.sh
+
+      - name: Check release tags for current version
+        id: check_release
+        uses: actions/github-script@v7
+        env:
+          CURRENT_VERSION: ${{ steps.version_metadata.outputs.canonical_version }}
+        with:
+          script: |
+            const currentVersion = process.env.CURRENT_VERSION;
+
+            if (!currentVersion) {
+              core.setFailed('CURRENT_VERSION was not provided.');
+              return;
+            }
+
+            if (context.eventName !== 'push') {
+              const reason = `Running validation-only workflow for ${context.eventName}; allowing build verification for canonical version ${currentVersion}.`;
+              core.info(reason);
+              core.setOutput('should_build', 'true');
+              core.setOutput('reason', reason);
+              core.setOutput('matched_tag', '');
+              return;
+            }
+
+            if (context.ref === 'refs/heads/codex/feature-testing') {
+              const reason = `Feature-testing branch snapshot derived from canonical version ${currentVersion}; allowing build.`;
+              core.info(reason);
+              core.setOutput('should_build', 'true');
+              core.setOutput('reason', reason);
+              core.setOutput('matched_tag', '');
+              return;
+            }
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+
+            const normalizeTag = (tag) => tag.replace(/^v/, '').trim();
+            const normalizeReleaseVersion = (tag) => normalizeTag(tag).replace(/-pre$/, '');
+            const matchedRelease = releases.find((release) => !release.draft && normalizeReleaseVersion(release.tag_name) === currentVersion);
+            const matchedTag = matchedRelease?.tag_name ?? '';
+
+            core.info(`Normalized current version: ${currentVersion}`);
+            core.info(`Matched release tag: ${matchedTag || 'none'}`);
+
+            if (matchedRelease) {
+              const reason = `Skipping build because version ${currentVersion} already exists as release tag ${matchedTag}.`;
+              core.info(reason);
+              core.setOutput('should_build', 'false');
+              core.setOutput('reason', reason);
+              core.setOutput('matched_tag', matchedTag);
+              return;
+            }
+
+            const reason = `Proceeding with build because version ${currentVersion} does not exist in repository releases.`;
+            core.info(reason);
+            core.setOutput('should_build', 'true');
+            core.setOutput('reason', reason);
+            core.setOutput('matched_tag', '');
+
+  build_verification:
+    needs:
+      - validate_build_inputs
+    if: needs.validate_build_inputs.outputs.should_build == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log validation decision
+        shell: bash
+        run: |
+          echo "Validation decision: ${{ needs.validate_build_inputs.outputs.should_build }}"
+          echo "Reason: ${{ needs.validate_build_inputs.outputs.reason }}"
+          echo "Canonical version: ${{ needs.validate_build_inputs.outputs.canonical_version }}"
+          echo "Matched release tag: ${{ needs.validate_build_inputs.outputs.matched_tag || 'none' }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Validate canonical version metadata
+        shell: bash
+        run: bash .codex/scripts/version-metadata.sh
+
+      - name: Run release hygiene gate
+        shell: pwsh
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: ./.codex/scripts/release-nudge.ps1
+
+      - name: Verify canonical files remain unchanged
+        shell: bash
+        run: |
+          csproj='${{ needs.validate_build_inputs.outputs.csproj_file }}'
+          git diff --exit-code -- "$csproj" thunderstore.toml CHANGELOG.md
+
+      - name: Restore dependencies
+        shell: bash
+        run: |
+          dotnet restore '${{ needs.validate_build_inputs.outputs.csproj_file }}' \
+            --source https://api.nuget.org/v3/index.json \
+            --source https://nuget.bepinex.dev/v3/index.json
+
+      - name: Build validation artifact
+        shell: bash
+        run: |
+          version='${{ needs.validate_build_inputs.outputs.canonical_version }}'
+          dotnet build '${{ needs.validate_build_inputs.outputs.csproj_file }}' \
+            --configuration Release \
+            --no-restore \
+            -p:Version="$version" \
+            -p:DeployToClient=false \
+            -p:RunGenerateREADME=false
+
+  prepare_prerelease:
+    needs:
+      - validate_build_inputs
+      - build_verification
+    if: >-
+      github.event_name == 'push' &&
+      needs.validate_build_inputs.outputs.should_build == 'true' &&
+      github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      prerelease_version: ${{ steps.prepare_version.outputs.prerelease_version }}
+      prerelease_tag: ${{ steps.prepare_version.outputs.prerelease_tag }}
+      prerelease_name: ${{ steps.prepare_version.outputs.prerelease_name }}
+
+    steps:
+      - name: Prepare prerelease metadata
+        id: prepare_version
+        shell: bash
+        run: |
+          canonical_version='${{ needs.validate_build_inputs.outputs.canonical_version }}'
+
+          if [ -z "$canonical_version" ]; then
+            echo "Canonical version is empty; cannot prepare prerelease metadata." >&2
+            exit 1
+          fi
+
+          echo "prerelease_version=$canonical_version" >> "$GITHUB_OUTPUT"
+          echo "prerelease_tag=v${canonical_version}-pre" >> "$GITHUB_OUTPUT"
+          echo "prerelease_name=Pre-release v${canonical_version}" >> "$GITHUB_OUTPUT"
+
+  publish_prerelease:
+    needs:
+      - validate_build_inputs
+      - build_verification
+      - prepare_prerelease
+    if: >-
+      github.event_name == 'push' &&
+      needs.validate_build_inputs.outputs.should_build == 'true' &&
+      github.ref == 'refs/heads/main'
     permissions:
       contents: write
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v2
-        with:
-          dotnet-version: 7.0.x
-          
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0        
-        
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Validate canonical version metadata
+        shell: bash
+        run: bash .codex/scripts/version-metadata.sh
+
       - name: Restore dependencies
-        run: dotnet restore
-        
-      - name: Discover .csproj
-        id: discover_csproj
+        shell: bash
         run: |
-          # Find the first .csproj outside bin/obj directories.
-          # Adjust if you have multiple .csproj files.
-          csproj_file=$(find . -type f -name '*.csproj' \
-            -not -path '*/bin/*' \
-            -not -path '*/obj/*' | head -n 1)
-          
-          echo "csproj_file=$csproj_file" >> $GITHUB_OUTPUT
-        
-      - name: Get DLL name
-        id: get_dll_name
+          dotnet restore '${{ needs.validate_build_inputs.outputs.csproj_file }}' \
+            --source https://api.nuget.org/v3/index.json \
+            --source https://nuget.bepinex.dev/v3/index.json
+
+      - name: Build prerelease artifact
+        shell: bash
         run: |
-          csproj="${{ steps.discover_csproj.outputs.csproj_file }}"
-          dll_name=$(basename "$csproj" .csproj)
-          echo "dll_name=$dll_name" >> $GITHUB_OUTPUT
+          version='${{ needs.prepare_prerelease.outputs.prerelease_version }}'
+          dotnet build '${{ needs.validate_build_inputs.outputs.csproj_file }}' \
+            --configuration Release \
+            --no-restore \
+            -p:Version="$version" \
+            -p:DeployToClient=false \
+            -p:RunGenerateREADME=false
 
-      - name: Install xmllint
-        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
-
-      - name: Extract version from .csproj
-        id: extract_version
+      - name: Prepare prerelease notes
+        shell: bash
         run: |
-          version=$(xmllint --xpath "string(//Project/PropertyGroup/Version)" "${{ steps.discover_csproj.outputs.csproj_file }}")
-          echo "version=$version" >> $GITHUB_ENV
+          bash .codex/scripts/prerelease-notes.sh \
+            --version '${{ needs.prepare_prerelease.outputs.prerelease_version }}' \
+            --tag '${{ needs.prepare_prerelease.outputs.prerelease_tag }}' \
+            --branch '${{ github.ref_name }}' \
+            --commit '${{ github.sha }}' \
+            --run-id '${{ github.run_id }}' \
+            --output ./dist/prerelease-notes.md
 
-      - name: Update thunderstore.toml
-        run: |
-          sed -i "s/versionNumber = \".*\"/versionNumber = \"${{ env.version }}\"/" thunderstore.toml
-
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          if [ -n "$(git status --porcelain thunderstore.toml)" ]; then
-            git add thunderstore.toml
-            git commit -m "chore: Update thunderstore.toml version to ${{ env.version }}"
-            git push
-          else
-            echo "No changes to commit in thunderstore.toml"
-          fi
-          
-      - name: Build (Release)
-        run: dotnet build . --configuration Release -p:Version=${{ env.version }} -p:RunGenerateREADME=false
-
-      - name: GH Release
-        uses: softprops/action-gh-release@v1
-        if: github.event_name == 'workflow_dispatch'
+      - name: GH Release (pre-release)
+        uses: softprops/action-gh-release@v2.6.2
+        if: needs.prepare_prerelease.outputs.prerelease_version != ''
         with:
-          body: Manual pre-release of ${{ env.version }}
-          name: v${{ env.version }}
+          body_path: ./dist/prerelease-notes.md
+          name: ${{ needs.prepare_prerelease.outputs.prerelease_name }}
           fail_on_unmatched_files: true
           prerelease: true
-          tag_name: v${{ env.version }}
+          tag_name: ${{ needs.prepare_prerelease.outputs.prerelease_tag }}
           files: |
-            ./bin/Release/net6.0/${{ steps.get_dll_name.outputs.dll_name }}.dll
+            ./bin/Release/net6.0/RetroCamera.dll
+            CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  prepare_feature_testing_prerelease:
+    needs:
+      - validate_build_inputs
+      - build_verification
+    if: >-
+      github.event_name == 'push' &&
+      needs.validate_build_inputs.outputs.should_build == 'true' &&
+      github.ref == 'refs/heads/codex/feature-testing'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      feature_testing_version: ${{ steps.derive_version.outputs.feature_testing_version }}
+
+    steps:
+      - name: Derive feature-testing version
+        id: derive_version
+        shell: bash
+        run: |
+          canonical_version='${{ needs.validate_build_inputs.outputs.canonical_version }}'
+
+          if [ -z "$canonical_version" ]; then
+            echo "Canonical version is empty; cannot derive feature-testing version." >&2
+            exit 1
+          fi
+
+          feature_testing_version="${canonical_version}-ft.${GITHUB_RUN_NUMBER}"
+
+          echo "Derived feature-testing version: $feature_testing_version"
+          echo "feature_testing_version=$feature_testing_version" >> "$GITHUB_OUTPUT"
+
+  publish_feature_testing_prerelease:
+    needs:
+      - validate_build_inputs
+      - build_verification
+      - prepare_feature_testing_prerelease
+    if: >-
+      github.event_name == 'push' &&
+      needs.validate_build_inputs.outputs.should_build == 'true' &&
+      github.ref == 'refs/heads/codex/feature-testing'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        shell: bash
+        run: |
+          dotnet restore '${{ needs.validate_build_inputs.outputs.csproj_file }}' \
+            --source https://api.nuget.org/v3/index.json \
+            --source https://nuget.bepinex.dev/v3/index.json
+
+      - name: Build feature-testing artifact
+        shell: bash
+        run: |
+          feature_testing_version='${{ needs.prepare_feature_testing_prerelease.outputs.feature_testing_version }}'
+          dotnet build '${{ needs.validate_build_inputs.outputs.csproj_file }}' \
+            --configuration Release \
+            --no-restore \
+            -p:Version="$feature_testing_version" \
+            -p:DeployToClient=false \
+            -p:RunGenerateREADME=false
+
+      - name: GH Release (feature-testing snapshot)
+        uses: softprops/action-gh-release@v2.6.2
+        if: needs.prepare_feature_testing_prerelease.outputs.feature_testing_version != ''
+        with:
+          body: |
+            Disposable feature-testing branch snapshot for validation and smoke testing only.
+            - Snapshot version: ${{ needs.prepare_feature_testing_prerelease.outputs.feature_testing_version }}
+            - Canonical version: ${{ needs.validate_build_inputs.outputs.canonical_version }}
+            - Branch: ${{ github.ref_name }}
+            - Commit: ${{ github.sha }}
+            - Run: ${{ github.run_id }}
+          name: feature-testing prerelease v${{ needs.prepare_feature_testing_prerelease.outputs.feature_testing_version }}
+          fail_on_unmatched_files: true
+          prerelease: true
+          tag_name: v${{ needs.prepare_feature_testing_prerelease.outputs.feature_testing_version }}
+          files: |
+            ./bin/Release/net6.0/RetroCamera.dll
             CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -8,6 +8,7 @@ using static RetroCamera.Configuration.OptionsManager;
 using static RetroCamera.Utilities.CameraState;
 using static RetroCamera.Utilities.Persistence;
 using static RetroCamera.Configuration.QuipManager;
+using static RetroCamera.Systems.RetroCamera;
 using BoolChanged = RetroCamera.Configuration.MenuOption<bool>.OptionChangedHandler<bool>;
 using FloatChanged = RetroCamera.Configuration.MenuOption<float>.OptionChangedHandler<float>;
 using UnityEngine.InputSystem;
@@ -178,7 +179,7 @@ internal static class Settings
     }
     static void UpdateActionModeState(bool enabled)
     {
-        RetroCamera.ActionMode(enabled);
+        ActionMode(enabled);
 
         if (IsMenuOpen) IsMenuOpen = false;
         if (ActionWheelSystemPatch._wheelVisible) ActionWheelSystemPatch._wheelVisible = false;
